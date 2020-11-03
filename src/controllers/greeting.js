@@ -1,4 +1,6 @@
+const { time } = require('console');
 const https = require('https');
+const { type } = require('os');
 
 const toDate = (string) => Date.parse(`01/01/1990 ${string}`);
 
@@ -6,8 +8,8 @@ const transformAmPmTo24 = (stringAmPm) => {
   const arrayValue = stringAmPm.split(RegExp(':| '));
   return (
     (arrayValue[3] === 'PM' ? 
-      +(arrayValue[0] === '12' ? '00' : arrayValue [0])+12-3
-      : +(arrayValue[0] === '12' ? '00' : arrayValue [0])-3)
+      +(arrayValue[0] === '12' ? '00' : arrayValue [0])+12
+      : +(arrayValue[0] === '12' ? '00' : arrayValue [0]))
     +':'+arrayValue[1]
     +':'+arrayValue[2]
   );
@@ -50,7 +52,11 @@ exports.getGreeting = async (req, res, next) => {
     return ((this.getHours() < 10)?"0":"") + this.getHours() +":"+ ((this.getMinutes() < 10)?"0":"") + this.getMinutes() +":"+ ((this.getSeconds() < 10)?"0":"") + this.getSeconds();
   };
   try {
-    const timeNow = (new Date().now());
+    const timeNow = (
+      (new Date().now()).slice(0, 2) < 3 
+      ? 24-(new Date().now()).slice(0,2) 
+      : (new Date().now()).slice(0,2)-3
+    ) + (new Date().now()).slice(2,);
     // TODO convert or accept timezone
     const sun = await getHttpsResponse('https://api.sunrise-sunset.org/json?lat=-15.7801&lng=-47.9292&date=today');
     return res.status(200).json(getDayPeriod(sun, timeNow));
@@ -64,7 +70,11 @@ exports.getGreetingSVG = async (req, res, next) => {
     return ((this.getHours() < 10)?"0":"") + this.getHours() +":"+ ((this.getMinutes() < 10)?"0":"") + this.getMinutes() +":"+ ((this.getSeconds() < 10)?"0":"") + this.getSeconds();
   };
   try {
-    const timeNow = (new Date().now());
+    const timeNow = (
+      (new Date().now()).slice(0, 2) < 3 
+      ? 24-(new Date().now()).slice(0,2) 
+      : (new Date().now()).slice(0,2)-3
+    ) + (new Date().now()).slice(2,);
     // TODO convert or accept timezone
     const sun = await getHttpsResponse('https://api.sunrise-sunset.org/json?lat=-15.7801&lng=-47.9292&date=today');
     const dayPeriod = getDayPeriodEmoji(sun, timeNow);
