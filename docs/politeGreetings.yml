@@ -25,6 +25,17 @@ paths:
           $ref: '#/components/responses/PoliteGreeting'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /greeting/svg:
+    get:
+      summary: 'Simple route that returns a greeting as svg'
+      description: 'This route returns a polite greeting based on Brasilia sunset and sunrise'
+      tags:
+        - Polite Greeting
+      responses:
+        '200':
+          $ref: '#/components/responses/PoliteGreetingSVG'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 components:
   responses:
     PoliteGreeting:
@@ -33,6 +44,14 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/PoliteGreeting'
+
+    PoliteGreetingSVG:
+      description: A Polite Greeting in Brazilian Portuguese
+      content:
+        image/*:     # Media type
+          schema: 
+            type: string
+            format: binary
 
     InternalServerError:
       description: Internal Server Error

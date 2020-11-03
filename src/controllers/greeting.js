@@ -68,21 +68,23 @@ exports.getGreetingSVG = async (req, res, next) => {
     // TODO convert or accept timezone
     const sun = await getHttpsResponse('https://api.sunrise-sunset.org/json?lat=-15.7801&lng=-47.9292&date=today');
     const dayPeriod = getDayPeriodEmoji(sun, timeNow);
-    res.writeHeader(200, {"Content-Type": "text/html"});  
+    res.writeHeader(200, {"Content-Type": "image/svg+xml; charset=utf-8"});  
     res.write(
-    `<!DOCTYPE html>
-    <html>
-    <meta charset="UTF-8">
-    <body>
-    
-    <svg height="30" width="200">
-      <text x="0" y="15" fill="black">${dayPeriod.emoji} ${dayPeriod.text}</text>
+    `<svg xmlns="http://www.w3.org/2000/svg">
+      <style>
+        .header {
+          font: 600 18px Ubuntu;
+          fill: #000;
+        }
+      </style>
+      <g transform="translate(10, 30)">
+          <text x="0" y="0"
+            class="header">
+            ${dayPeriod.emoji} ${dayPeriod.text} ${timeNow}
+          </text>
+      </g>
       ${dayPeriod.text}
-    </svg>
-     
-    </body>
-    </html>
-    `);
+    </svg>`);
     return res.end();
   } catch (err) {
     return next(err);
