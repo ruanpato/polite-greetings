@@ -16,10 +16,10 @@
   },
   "servers": [
     {
-      "url": "https:"
+      "url": "https://polite-greetings.herokuapp.com/"
     },
     {
-      "url": "http://localhost:3000/api"
+      "url": "http://localhost:3000/"
     }
   ],
   "paths": {

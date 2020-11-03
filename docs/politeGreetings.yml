@@ -11,7 +11,7 @@ info:
     url: 'https://creativecommons.org/licenses/by-nc-nd/4.0/legalcode.pt'
   version: '0.1'
 servers:
-  - url: 'https:'
+  - url: 'https://polite-greetings.herokuapp.com/'
   - url: 'http://localhost:3000/'
 paths:
   /greeting:
