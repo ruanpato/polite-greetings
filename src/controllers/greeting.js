@@ -80,17 +80,24 @@ exports.getGreetingSVG = async (req, res, next) => {
     const dayPeriod = getDayPeriodEmoji(sun, timeNow);
     res.writeHeader(200, {"Content-Type": "image/svg+xml; charset=utf-8"});  
     res.write(
-    `<svg xmlns="http://www.w3.org/2000/svg">
+    `<svg
+    width="140"
+    height="40"
+    xmlns="http://www.w3.org/2000/svg"
+    >
       <style>
         .header {
           font: 18px Ubuntu;
           fill: #000;
+          align: centr;
         }
-      </style>
-          <text x="0" y="0"
+      </style> 
+      <g transform="translate(12, 27)">
+          <text
             class="header">
             ${dayPeriod.emoji} ${dayPeriod.text}
           </text>
+      </g>
       ${dayPeriod.text}
     </svg>`);
     return res.end();
