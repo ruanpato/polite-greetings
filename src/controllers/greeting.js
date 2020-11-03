@@ -6,8 +6,8 @@ const transformAmPmTo24 = (stringAmPm) => {
   const arrayValue = stringAmPm.split(RegExp(':| '));
   return (
     (arrayValue[3] === 'PM' ? 
-      +(arrayValue[0] === '12' ? '00' : arrayValue [0])+12
-      : (arrayValue[0] === '12' ? '00' : arrayValue [0]))
+      +(arrayValue[0] === '12' ? '00' : arrayValue [0])+12-3
+      : +(arrayValue[0] === '12' ? '00' : arrayValue [0])-3)
     +':'+arrayValue[1]
     +':'+arrayValue[2]
   );
@@ -73,16 +73,14 @@ exports.getGreetingSVG = async (req, res, next) => {
     `<svg xmlns="http://www.w3.org/2000/svg">
       <style>
         .header {
-          font: 600 18px Ubuntu;
+          font: 18px Ubuntu;
           fill: #000;
         }
       </style>
-      <g transform="translate(10, 30)">
           <text x="0" y="0"
             class="header">
-            ${dayPeriod.emoji} ${dayPeriod.text} ${timeNow}
+            ${dayPeriod.emoji} ${dayPeriod.text}
           </text>
-      </g>
       ${dayPeriod.text}
     </svg>`);
     return res.end();
