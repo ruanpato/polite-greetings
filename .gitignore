@@ -1,3 +1,12 @@
+.vercel
+.env
+node_modules
+package-lock.json
+*.lock
+.vscode/
+.idea/
+coverage
+
 # Logs
 logs
 *.log

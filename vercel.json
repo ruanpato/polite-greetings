@@ -1,0 +1,8 @@
+{
+  "redirects": [
+    {
+      "source": "./src/app.js",
+      "destination": "https://github.com/ruanpato/polite-greetings"
+    }
+  ]
+}
