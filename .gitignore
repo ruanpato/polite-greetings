@@ -1,4 +1,4 @@
-.vercel
+secrets
 .env
 node_modules
 package-lock.json
@@ -6,6 +6,9 @@ package-lock.json
 .vscode/
 .idea/
 coverage
+npm-debug.log
+.DS_Store
+/*.env
 
 # Logs
 logs
