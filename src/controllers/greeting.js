@@ -1,33 +1,7 @@
-const { time } = require('console');
 const https = require('https');
-const { type } = require('os');
+const sunCalc = require('suncalc');
 
 const toDate = (string) => Date.parse(`01/01/1990 ${string}`);
-
-const transformAmPmTo24 = (stringAmPm) => {
-  const arrayValue = stringAmPm.split(RegExp(':| '));
-  return (
-    (arrayValue[3] === 'PM' ? 
-      +(arrayValue[0] === '12' ? '00' : arrayValue [0])+12
-      : +(arrayValue[0] === '12' ? '00' : arrayValue [0]))
-    +':'+arrayValue[1]
-    +':'+arrayValue[2]
-  );
-};
-
-const getHttpsResponse = (url) => new Promise((resolve, reject) => {
-  https.get(url, res => {
-    res.setEncoding('utf8');
-    let body = '';
-    res.on('data', chunk => (body += chunk));
-    res.on('end', () => resolve(
-      {
-        set: transformAmPmTo24(JSON.parse(body).results.sunset),
-        rise: transformAmPmTo24(JSON.parse(body).results.sunrise),
-      },
-    ));
-  }).on('error', reject);
-});
 
 const getDayPeriod = (sun, timeNow) => {
   return ((toDate(timeNow) >= toDate(sun.set)) && (toDate(timeNow) <= sun.rise)) ?
@@ -58,7 +32,11 @@ exports.getGreeting = async (req, res, next) => {
       : (new Date().now()).slice(0,2)-3
     ) + (new Date().now()).slice(2,);
     // TODO convert or accept timezone
-    const sun = await getHttpsResponse('https://api.sunrise-sunset.org/json?lat=-15.7801&lng=-47.9292&date=today');
+    const sunCalculations = sunCalc.getTimes(new Date, -15.7801, -47.9292);
+    const sun = {
+      set: (sunCalculations.sunset.toISOString().split('T')[1]).split('.')[0],
+      rise: (sunCalculations.sunrise.toISOString().split('T')[1]).split('.')[0],
+    }
     return res.status(200).json(getDayPeriod(sun, timeNow));
   } catch (err) {
     return next(err);
@@ -76,7 +54,11 @@ exports.getGreetingSVG = async (req, res, next) => {
       : (new Date().now()).slice(0,2)-3
     ) + (new Date().now()).slice(2,);
     // TODO convert or accept timezone
-    const sun = await getHttpsResponse('https://api.sunrise-sunset.org/json?lat=-15.7801&lng=-47.9292&date=today');
+    const sunCalculations = sunCalc.getTimes(new Date, -15.7801, -47.9292);
+    const sun = {
+      set: (sunCalculations.sunset.toISOString().split('T')[1]).split('.')[0],
+      rise: (sunCalculations.sunrise.toISOString().split('T')[1]).split('.')[0],
+    }
     const dayPeriod = getDayPeriodEmoji(sun, timeNow);
     res.setHeader("Content-Type", "image/svg+xml",);
     res.setHeader("Cache-control", "no-cache");
