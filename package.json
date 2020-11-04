@@ -38,7 +38,8 @@
 		"mysql": "^2.18.1",
 		"node-slogger": "^2.2.0",
 		"js-yaml": "^3.14.0",
-		"swagger-ui-express": "^4.1.4"
+		"swagger-ui-express": "^4.1.4",
+		"suncalc": "^1.8.0"
 	},
 	"repository": {
 		"type": "git",
