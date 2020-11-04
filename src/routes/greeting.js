@@ -3,7 +3,7 @@ const greetingController = require('../controllers/greeting');
 
 const router = express.Router();
 
-router.get('/', greetingController.getGreeting);
-router.get('/svg', greetingController.getGreetingSVG);
+router.get('/text', greetingController.getGreeting);
+router.get('/image', greetingController.getGreetingSVG);
 
 module.exports = router;

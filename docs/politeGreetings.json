@@ -23,7 +23,7 @@
     }
   ],
   "paths": {
-    "/greetings": {
+    "/greetings/text": {
       "get": {
         "summary": "Simple route that returns a greeting",
         "description": "This route returns a polite greeting based on Brasilia sunset and sunrise",
@@ -40,7 +40,7 @@
         }
       }
     },
-    "/greetings/svg": {
+    "/greetings/image": {
       "get": {
         "summary": "Simple route that returns a greeting as svg",
         "description": "This route returns a polite greeting based on Brasilia sunset and sunrise",
