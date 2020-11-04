@@ -88,3 +88,49 @@ exports.getGreetingSVG = async (req, res, next) => {
     return next(err);
   }
 };
+
+exports.getGreetingSVGTest = async (req, res, next) => {
+  Date.prototype.now = function () {
+    return ((this.getHours() < 10)?"0":"") + this.getHours() +":"+ ((this.getMinutes() < 10)?"0":"") + this.getMinutes() +":"+ ((this.getSeconds() < 10)?"0":"") + this.getSeconds();
+  };
+  try {
+    const timeNow = (
+      (new Date().now()).slice(0, 2) < 3 
+      ? 24+((new Date().now()).slice(0,2)-3) 
+      : (new Date().now()).slice(0,2)-3
+    ) + (new Date().now()).slice(2,);
+    // TODO convert or accept timezone
+    const sunCalculations = sunCalc.getTimes(new Date, -15.7801, -47.9292);
+    const sun = {
+      set: (sunCalculations.sunset.toISOString().split('T')[1]).split('.')[0],
+      rise: (sunCalculations.sunrise.toISOString().split('T')[1]).split('.')[0],
+    }
+    const dayPeriod = getDayPeriodEmoji(sun, timeNow);
+    res.setHeader("Content-Type", "image/svg+xml");
+    res.setHeader("Cache-control", "public, max-age=30");
+    res.status(200);
+    res.write(
+    `<svg
+    width="240"
+    height="40"
+    xmlns="http://www.w3.org/2000/svg"
+    >
+      <style>
+        .header {
+          font: 18px Ubuntu;
+          fill: #000;
+        }
+      </style> 
+      <g transform="translate(12, 27)">
+          <text
+            class="header">
+            ${dayPeriod.emoji} ${dayPeriod.text} ${timeNow}
+          </text>
+      </g>
+      ${dayPeriod.text}
+    </svg>`);
+    return res.end();
+  } catch (err) {
+    return next(err);
+  }
+};
