@@ -30,7 +30,7 @@ const getHttpsResponse = (url) => new Promise((resolve, reject) => {
 });
 
 const getDayPeriod = (sun, timeNow) => {
-  return ((toDate(timeNow) >= toDate(sun.set)) || (toDate(timeNow) <= sun.rise)) ?
+  return ((toDate(timeNow) >= toDate(sun.set)) && (toDate(timeNow) <= sun.rise)) ?
       'Boa Noite'
       : (toDate(timeNow) > toDate('12:00:00') ?
         'Boa Tarde'
@@ -54,7 +54,7 @@ exports.getGreeting = async (req, res, next) => {
   try {
     const timeNow = (
       (new Date().now()).slice(0, 2) < 3 
-      ? 24-(new Date().now()).slice(0,2) 
+      ? 24+((new Date().now()).slice(0,2)-3) 
       : (new Date().now()).slice(0,2)-3
     ) + (new Date().now()).slice(2,);
     // TODO convert or accept timezone
@@ -72,13 +72,16 @@ exports.getGreetingSVG = async (req, res, next) => {
   try {
     const timeNow = (
       (new Date().now()).slice(0, 2) < 3 
-      ? 24-(new Date().now()).slice(0,2) 
+      ? 24+((new Date().now()).slice(0,2)-3) 
       : (new Date().now()).slice(0,2)-3
     ) + (new Date().now()).slice(2,);
+    console.log(timeNow);
     // TODO convert or accept timezone
     const sun = await getHttpsResponse('https://api.sunrise-sunset.org/json?lat=-15.7801&lng=-47.9292&date=today');
     const dayPeriod = getDayPeriodEmoji(sun, timeNow);
-    res.writeHeader(200, {"Content-Type": "image/svg+xml; charset=utf-8"});  
+    res.setHeader("Cache-Control", `public, max-age=300`);
+    res.setHeader("Cache-Control", `public, max-age=300`);
+    res.setHeader("Content-Type", "image/svg+xml");
     res.write(
     `<svg
     width="140"
@@ -89,7 +92,6 @@ exports.getGreetingSVG = async (req, res, next) => {
         .header {
           font: 18px Ubuntu;
           fill: #000;
-          align: centr;
         }
       </style> 
       <g transform="translate(12, 27)">
