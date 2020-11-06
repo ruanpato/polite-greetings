@@ -4,6 +4,6 @@ const router = express.Router();
 
 router.use('/greetings', require('./greeting'));
 
-router.use('/', require('./swagger'));
+//router.use('/', require('./swagger'));
 
 module.exports = router;
