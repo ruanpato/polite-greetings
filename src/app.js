@@ -17,3 +17,5 @@ app.use('/', router);
 app.listen(port, '0.0.0.0', () => {
   log.info((`Server is listening`), null);
 });
+
+module.exports = app;
