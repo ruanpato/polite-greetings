@@ -1,12 +1,12 @@
-const express = require('express');
+const router = require('express').Router();
 const swaggerUi = require('swagger-ui-express');
-const swaggerController = require('../controllers/apiDocs');
 
-const router = express.Router();
+const apiDocsController = require('../controllers/apiDocs');
 
-swaggerController.convertYamltoJson();
-const swaggerDocument = require('../../docs/politeGreetings.json');
-
-router.use('/', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+router.use(
+    '/api-docs',
+    swaggerUi.serve,
+    swaggerUi.setup(apiDocsController.getSwaggerDocument()),
+);
 
 module.exports = router;

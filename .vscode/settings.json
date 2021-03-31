@@ -10,5 +10,9 @@
         "editorCursor.foreground": "#00C894",
         "editorLineNumber.foreground": "#00C894",
         "editorLineNumber.activeForeground": "#C8FCEA",
-    }
+    },
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true,
+    "editor.detectIndentation": true,
+    "files.eol": "\n"
 }

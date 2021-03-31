@@ -1,11 +1,16 @@
-const fs = require('fs');
+const yamljs = require('yamljs');
 const path = require('path');
-const yamljs = require('js-yaml');
 
-const docsLocation = path.join(process.cwd(), '/docs');
+const getSwaggerFilePath = () =>
+  path.join(process.cwd(), '/docs/apiDocs.yml');
 
-exports.convertYamltoJson = () => {
-  const swaggerYamlFile = (`${docsLocation}/politeGreetings.yml`.replace('/src/controllers', ''));
-  const swaggerJsFile = (`${docsLocation}/politeGreetings.json`.replace('/src/controllers', ''));
-  fs.writeFileSync(swaggerJsFile, JSON.stringify(yamljs.load(fs.readFileSync(swaggerYamlFile, { encoding: 'utf-8' })), null, 2));
+const getYamlAsJson = (filePath) => yamljs.load(filePath);
+
+exports.getSwaggerDocument = () => {
+  try {
+    return getYamlAsJson(getSwaggerFilePath());
+  } catch (err) {
+    console.log('Errr', err);
+    return 'Erro';
+  }
 };
