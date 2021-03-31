@@ -1,9 +1,6 @@
-const express = require('express');
-
-const router = express.Router();
-
-router.use('/greetings', require('./greeting'));
+const router = require('express').Router();
 
 router.use('/', require('./apiDocs'));
+router.use('/greetings', require('./greetings'));
 
 module.exports = router;

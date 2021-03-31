@@ -1,0 +1,14 @@
+{
+  "extends": ["eslint:recommended", "google"],
+  "rules": {
+    "new-cap": 0
+    // Additional, per-project rules...
+  },
+  "parserOptions": {
+    "ecmaVersion": 2020
+  },
+  "env": {
+      "es6": true,
+      "node": true
+  }
+}
