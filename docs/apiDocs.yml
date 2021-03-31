@@ -1,49 +1,152 @@
 openapi: 3.0.1
 info:
-  title: Polite Greetings
-  description: An simple API built just to return a greeting to my personal github mardkwon file
+  title: 'Cards API - CAPI'
+  description: 'An simple API built just to return a cards to my personal github mardkwon file'
   termsOfService: 'http://swagger.io/terms/'
   contact:
-    name: Polite Greetings
-    url: 'https://github.com/duckactions/'
+    name: 'Ruan Pato'
+    url: 'https://github.com/ruanpato/'
   license:
-    name: CC BY-NC-ND 4.0
+    name: 'CC BY-NC-ND 4.0'
     url: 'https://creativecommons.org/licenses/by-nc-nd/4.0/legalcode.pt'
-  version: '0.1'
+  version: '0.2'
 servers:
-  - url: 'https://polite-greetings.herokuapp.com/'
-  - url: 'http://localhost:3000/'
+  - url: 'https://polite-greetings.herokuapp.com/api/v1'
+  - url: 'http://localhost:3000/api/v1'
+tags:
+  - name: 'Greetings'
+    description: 'Greetings like Good Morning, based on specific criterion'
+  - name: 'Daily Card'
+    description: 'An Daily card, like an daily law from hacker-laws'
+  - name: 'Api Documentation'
+    description: 'Swagger API documentation'
 paths:
-  /greetings/text:
+  '/greetings':
     get:
       summary: 'Simple route that returns a greeting'
       description: 'This route returns a polite greeting based on Brasilia sunset and sunrise'
       tags:
-        - Polite Greeting
+        - 'Greetings'
+      parameters:
+        - in: query
+          name: 'latLong'
+          schema:
+            type: string
+          description: 'Latitude and Longitude, separeted by comma(,) e.g. "-15.7801,-47.9292"'
+          required: true
+        - in: query
+          name: 'responseType'
+          schema:
+            type: string
+            enum:
+              - 'png'
+              - 'text'
+              - 'json'
+          description: 'The type of content that will be returned in response'
+        - in: query
+          name: 'showTz'
+          schema:
+            type: boolean
+          description: 'If is wanted that Time Zone (e.g. America/Sao_Paulo) would be returned in response'
+        - in: query
+          name: 'fontSize'
+          schema:
+            type: integer
+          description: 'The size in Pixels of font (Sans) that will be returned if was selected png'
+        - in: query
+          name: 'fontColor'
+          schema:
+            type: string
+          description: 'The color of font that will be returned if was selected png'
+        - in: query
+          name: 'backgroundColor'
+          schema:
+            type: string
+          description: 'The color of image background that will be returned if was selected png'
+          
       responses:
         '200':
-          $ref: '#/components/responses/PoliteGreeting'
+          $ref: '#/components/responses/Greeting'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
         '500':
           $ref: '#/components/responses/InternalServerError'
-  /greetings/image:
+
+  '/api-docs':
     get:
-      summary: 'Simple route that returns a greeting as svg'
+      summary: 'Simple route that returns a greeting'
       description: 'This route returns a polite greeting based on Brasilia sunset and sunrise'
       tags:
-        - Polite Greeting
+        - 'Api Documentation'
       responses:
         '200':
-          $ref: '#/components/responses/PoliteGreetingSVG'
+          description: 'OK'
+          content:
+            text/html:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  '/daily':
+    get:
+      summary: 'Simple route that returns a greeting'
+      description: 'This route returns a polite greeting based on Brasilia sunset and sunrise'
+      tags:
+        - 'Daily Card'
+      responses:
+        '200':
+          $ref: '#/components/responses/Greeting'
         '500':
           $ref: '#/components/responses/InternalServerError'
 components:
   responses:
-    PoliteGreeting:
-      description: A Polite Greeting in Brazilian Portuguese
+    BadRequest:
+        description: 'Bad Request'
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Error'
+    InternalServerError:
+      description: 'Internal Server Error'
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/PoliteGreeting'
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: 'Not Found'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+        description: 'Unauthorized'
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Error'
+    UnprocessableEntity:
+      description: 'Unprocessable Entity'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UnprocessableEntity'
+
+    Greeting:
+      description: 'A Polite Greeting'
+      content:
+        text/plain:
+          schema:
+            $ref: '#/components/schemas/Greeting'
+        application/json:
+          schema:
+            $ref: '#/components/schemas/GreetingJson'
+        image/png:
+          schema:
+            $ref: '#/components/schemas/GreetingPNG'
 
     PoliteGreetingSVG:
       description: A Polite Greeting in Brazilian Portuguese
@@ -52,22 +155,93 @@ components:
           schema: 
             type: string
             format: binary
-
-    InternalServerError:
-      description: Internal Server Error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/InternalServerError'
   
   schemas:
-    PoliteGreeting:
-      description: Polite Greeting as string
+    Greeting:
+      description: 'Polite Greeting as string'
       type: string
-
-    InternalServerError:
-      description: Internal Server Error
+    GreetingJson:
+      description: 'Polite Greeting as string'
       type: object
       properties:
-        error:
+        latLong:
           type: string
+          description: 'Latitude and Longitude, separeted by comma(,) e.g. "-15.7801,-47.9292"'
+        showTz:
+          type: string
+          description: 'If is wanted that Time Zone (e.g. America/Sao_Paulo) would be returned in response'
+        responseType:
+          type: string
+          description: 'The responseType informed in request'
+        fontColor:
+          type: string
+          description: 'The fontColor informed in request'
+        backgroundColor:
+          type: string
+          description: 'The backgroundColor informed in request'
+        fontSize:
+          type: string
+          description: 'The fontSize informed in request'
+        timezone:
+          type: string
+          description: 'The timezone based in latLong'
+        now:
+          type: string
+          format: 'date-time'
+          description: 'The time get in request execution time'
+        sun:
+          type: object
+          properties:
+            rise:
+              type: string
+              format: 'date-time'
+              description: 'The sunrise based in latLong'
+            set:
+              type: string
+              format: 'date-time'
+              description: 'The sunset based in latLong'
+            riseTomorrow:
+              type: string
+              format: 'date-time'
+              description: 'The sunrise of tomorrow based in latLong'
+        afternoonStarts:
+          type: string
+          format: 'date-time'
+          description: 'The intern definition of afternoon start'
+        expiresIn:
+          type: integer
+          description: 'The time until some greeting change'
+        period:
+          type: string
+          description: 'Day period based on latLong'
+        emoji:
+          type: string
+          description: 'Emoji based on day period'
+        message:
+          type: string
+          description: 'Greeting based on request'
+
+
+    GreetingPNG:
+      description: 'Polite Greeting as PNG'
+      type: string
+      format: binary
+
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - message
+    UnprocessableEntity:
+      description: 'Unprocessable Entity, this can have one or more invalid fields returned'
+      type: object
+      properties:
+        fieldInvalidName:
+          type: object
+          properties:
+            message:
+              type: string
+            rule:
+              type: string
