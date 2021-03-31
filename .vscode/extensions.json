@@ -1,6 +1,16 @@
 {
     "recommendations": [
+        "eamodio.gitlens",
+        "ritwickdey.liveserver",
         "dbaeumer.vscode-eslint",
-        "aaron-bond.better-comments"
+        "aaron-bond.better-comments",
+        "esbenp.prettier-vscode",
+        "hookyqr.beautify",
+        "coenraads.bracket-pair-colorizer-2",
+        "christian-kohler.path-intellisense",
+        "pkief.material-icon-theme",
+        "teabyii.ayu",
+        "yzane.markdown-pdf",
+        "shd101wyy.markdown-preview-enhanced"
     ]
 }

@@ -1,43 +1,13 @@
 const sunCalc = require('suncalc');
+const { Validator } = require('node-input-validator');
 
-const toSeconds = (timeAsString) => {
-  return timeAsString.slice(0,2)*3600
-        +timeAsString.slice(3,5)*60
-        +timeAsString.slice(6,8)*1;
-}
+const SunCalc = require('../helpers/sunCalc');
 
-const difference = (firstNumber, secondNumber) => {
-  return firstNumber > secondNumber ? 
-    firstNumber-secondNumber : secondNumber-firstNumber;
-}
-
-const getDayPeriod = (sun, timeNow) => {
-  if (toSeconds(timeNow) >= toSeconds(sun.set) || (toSeconds(timeNow) <= sun.rise))
-    return {
-      emoji: '🌕',
-      period: 'Night',
-      expires: difference(toSeconds('12:00:00'), toSeconds(timeNow))
-    };
-  else {
-    if (toSeconds(timeNow) > toSeconds('12:00:00'))
-      return {
-        emoji: '☀️', 
-        period: 'Afternoon', 
-        expires: difference(toSeconds(sun.set), toSeconds(timeNow))
-      };
-    // const {sunrise} = sunCalc.getTimes(today.setDate(today.getDate()+1), -15.7801, -47.9292);
-    return {
-      emoji: '🌅',
-      period: 'Morning',
-      expires: '300'
-    };
-  }
-}
-
-exports.getGreeting = async (req, res, next) => {
+exports.getGreetingText = async (req, res, next) => {
   Date.prototype.now = function () {
     return ((this.getHours() < 10)?"0":"") + this.getHours() +":"+ ((this.getMinutes() < 10)?"0":"") + this.getMinutes() +":"+ ((this.getSeconds() < 10)?"0":"") + this.getSeconds();
   };
+
   try {
     const timeNow = (
       (new Date().now()).slice(0, 2) < 3 
@@ -50,7 +20,8 @@ exports.getGreeting = async (req, res, next) => {
       set: (sunCalculations.sunset.toISOString().split('T')[1]).split('.')[0],
       rise: (sunCalculations.sunrise.toISOString().split('T')[1]).split('.')[0],
     }
-    return res.status(200).json('Good '+getDayPeriod(sun, timeNow).period);
+    SunCalc.getCurrentGMTDiffFromDate(-3);
+    return res.status(200).json('Good ' + SunCalc.getDayPeriod(sun, timeNow).period);
   } catch (err) {
     return next(err);
   }
@@ -72,7 +43,7 @@ exports.getGreetingSVG = async (req, res, next) => {
       set: (sunCalculations.sunset.toISOString().split('T')[1]).split('.')[0],
       rise: (sunCalculations.sunrise.toISOString().split('T')[1]).split('.')[0],
     }
-    const dayPeriod = getDayPeriod(sun, timeNow);
+    const dayPeriod = SunCalc.getDayPeriod(sun, timeNow);
     res.setHeader("Content-Type", "image/svg+xml");
     res.setHeader("Cache-control", `public, max-age=${dayPeriod.expires}`);
     res.status(200);
@@ -99,5 +70,48 @@ exports.getGreetingSVG = async (req, res, next) => {
     return res.end();
   } catch (err) {
     return next(err);
+  }
+};
+
+/**
+  * @function getGreeting
+  * 
+  * @queryParams {responseType}
+  * @param {responseType} string The type o media that will be returned (Text, SVG, ...)
+  * @param {latLong} string The latitude and longitude of client separated by comma
+*/
+exports.getGreeting = async (req, res, next) => {
+  let geoLocation = req.query;
+
+  const validateParams = new Validator(geoLocation, {
+    responseType: 'required',
+    latLong: 'required|latLong',
+  });
+  const paramsIsValid = await validateParams.check();
+
+  if (!paramsIsValid) {
+    return res.status(422).json(validateParams.errors);
+  }
+  const latitude = geoLocation.latLong.split(',')[0];
+  const longitude = geoLocation.latLong.split(',')[1];
+
+  try {
+    geoLocation = {
+      ...geoLocation,
+      timezone: await SunCalc.getTimeZone(latitude, longitude),
+      now: new Date(),
+      sun: await SunCalc.getSun(latitude, longitude),
+    };
+    geoLocation = {
+      ...geoLocation,
+      afternoonStarts: await SunCalc.getAfternoonStarts(geoLocation.sun),
+    };
+    geoLocation = await SunCalc.getActualPeriod(geoLocation);
+    const result = await SunCalc.getResponseByType(geoLocation, res);
+    return;
+  } catch (err) {
+    return res.status(500).json({
+      mesage: 'Internal Server Error',
+    });
   }
 };

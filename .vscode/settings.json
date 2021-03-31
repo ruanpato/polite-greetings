@@ -1,8 +1,14 @@
 {
-    "git.ignoreLimitWarning": true,
     "workbench.colorCustomizations": {
-        "activityBar.background": "#8400ff",
-        "titleBar.activeBackground": "#001aff",
-        "titleBar.activeForeground": "#FBFCFF"
+        "activityBar.background": "#00C894",
+        "activityBar.foreground": "#C8FCEA",
+        "activityBar.inactiveForeground": "#474555",
+        "activityBar.border": "#474555",
+        "titleBar.activeBackground": "#00C894",
+        "titleBar.activeForeground": "#C8FCEA",
+        "editorCursor.background": "#00C894",
+        "editorCursor.foreground": "#00C894",
+        "editorLineNumber.foreground": "#00C894",
+        "editorLineNumber.activeForeground": "#C8FCEA",
     }
 }
