@@ -35,14 +35,10 @@ const configureServer = () => {
 };
 
 exports.startServer = () => {
+  const port = process.env.PORT || 5000;
+  const host = process.env.SERVER || '0.0.0.0';
   const server = configureServer();
-  return server.listen(
-      process.env.PORT,
-      process.env.SERVER,
-      () => {
-        log.info((`Server is listening at ${process.env.PROTOCOL
-        }://${process.env.SERVER
-        }:${process.env.PORT}`), null);
-      },
-  );
+  return server.listen(port, host, () => {
+    log.info((`Server is listening at ${host}:${port}`), null);
+  });
 };

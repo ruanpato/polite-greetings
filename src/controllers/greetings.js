@@ -1,5 +1,6 @@
 const {Validator} = require('node-input-validator');
 
+const log = require('../helpers/lib/log/log');
 const greetingsHelper = require('../helpers/greetings');
 const textToImage = require('../helpers/textToImage');
 
@@ -11,7 +12,7 @@ const mountGreetingObject = async (latitude, longitude, geoLocation) => {
     sun: await greetingsHelper.getSun(latitude, longitude),
   };
   greetingObject.afternoonStarts = await greetingsHelper.getAfternoonStarts(
-      greetingObject.sun,
+      greetingObject,
   );
   greetingObject = await greetingsHelper.getActualPeriod(greetingObject);
   greetingObject.message = greetingObject.emoji + ' ' +
@@ -43,7 +44,7 @@ const mountResponse = async (greetingObject, res) => {
   });
   let returnText = greetingObject.message;
   if (stringAsBool(greetingObject.showTz)) {
-    returnText += `\n🌎 ${greetingObject.timezone}`;
+    returnText += `\n✈ ${greetingObject.timezone}`;
   }
   if (greetingObject.responseType.toLowerCase() === 'png') {
     const imageOptions = {
@@ -95,6 +96,7 @@ exports.getGreeting = async (req, res, next) => {
     res = await mountResponse(greetingObject, res);
     return;
   } catch (err) {
+    log.error('Error:  ', err);
     return res.status(500).json({
       mesage: 'Internal Server Error',
     });

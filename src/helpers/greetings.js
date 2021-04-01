@@ -1,6 +1,6 @@
 const GeoTz = require('geo-tz');
 const SunCalc = require('suncalc');
-
+const MomentTz = require('moment-timezone');
 
 const difference = (firstNumber, secondNumber) => {
   return firstNumber > secondNumber ?
@@ -30,9 +30,11 @@ exports.getSun = async (latitude, longitude) => {
   };
 };
 
-exports.getAfternoonStarts = async (sun) => {
-  const afternoon =
-    new Date(`${sun.rise.toISOString().split('T')[0]}T12:00:00.000Z`);
+exports.getAfternoonStarts = async (greetingObject) => {
+  const afternoon = MomentTz.tz(`${greetingObject.sun.rise.
+      toISOString().split('T')[0]} 12:00`,
+  greetingObject.timezone,
+  );
   return afternoon;
 };
 
@@ -49,7 +51,7 @@ exports.getActualPeriod = async (geoLocation) => {
       ...geoLocation,
       expiresIn: Math.ceil(difference(period.now, period.afternoonStart)/1000),
       period: 'Morning',
-      emoji: '🌅',
+      emoji: '☼',
     };
   }
   if (period.now >= period.afternoonStart && period.now < period.nightStart) {
@@ -57,7 +59,7 @@ exports.getActualPeriod = async (geoLocation) => {
       ...geoLocation,
       expiresIn: Math.ceil(difference(period.now, period.nightStart)/1000),
       period: 'Afternoon',
-      emoji: '☀️',
+      emoji: '☀',
     };
   }
 
@@ -65,6 +67,6 @@ exports.getActualPeriod = async (geoLocation) => {
     ...geoLocation,
     expiresIn: Math.ceil(difference(period.now, period.riseTomorrow)/1000),
     period: 'Night',
-    emoji: '🌙',
+    emoji: '☾',
   };
 };

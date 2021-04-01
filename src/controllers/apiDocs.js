@@ -10,7 +10,6 @@ exports.getSwaggerDocument = () => {
   try {
     return getYamlAsJson(getSwaggerFilePath());
   } catch (err) {
-    console.log('Errr', err);
     return 'Erro';
   }
 };
