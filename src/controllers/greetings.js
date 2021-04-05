@@ -2,7 +2,7 @@ const {Validator} = require('node-input-validator');
 
 const log = require('../helpers/lib/log/log');
 const greetingsHelper = require('../helpers/greetings');
-const textToImage = require('../helpers/textToImage');
+const convert = require('../helpers/conversion');
 
 const mountGreetingObject = async (latitude, longitude, geoLocation) => {
   let greetingObject = {
@@ -24,40 +24,26 @@ const mountGreetingObject = async (latitude, longitude, geoLocation) => {
   return greetingObject;
 };
 
-const hexColorParse = (hexColor) =>
-  hexColor.includes('#') ? hexColor : `#${hexColor}`;
-
-const stringAsBool = (string) => {
-  string = string ? string : 'false';
-  if (string.toLowerCase() == 'true' || string === '1') {
-    return true;
-  }
-  return false;
-};
-
-const fontSizeParse = (fontSize) =>
-  fontSize ? `${fontSize}px Sans` : '40px Sans';
-
 const mountResponse = async (greetingObject, res) => {
   res.set({
     'Cache-control': `public, max-age=${greetingObject.expiresIn}`,
   });
   let returnText = greetingObject.message;
-  if (stringAsBool(greetingObject.showTz)) {
+  if (convert.stringAsBool(greetingObject.showTz)) {
     returnText += `\n✈ ${greetingObject.timezone}`;
   }
   if (greetingObject.responseType.toLowerCase() === 'png') {
     const imageOptions = {
-      font: fontSizeParse(greetingObject.fontSize),
-      backgroundColor: hexColorParse(
+      font: convert.fontSizeParse(greetingObject.fontSize),
+      backgroundColor: convert.hexColorParse(
           greetingObject.backgroundColor || '#474555'),
-      color: hexColorParse(
+      color: convert.hexColorParse(
           greetingObject.fontColor || '#00C894'),
       lineSpacing: 10,
       padding: 15,
     };
-    const image = textToImage.
-        getImageToReturnResponse(returnText, imageOptions);
+    const image = convert.
+        textToImageBuffer(returnText, imageOptions);
     res.set(image.header);
     return res.status(200).end(image.buffer);
   }

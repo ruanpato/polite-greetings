@@ -16,8 +16,8 @@ servers:
 tags:
   - name: 'Greetings'
     description: 'Greetings like Good Morning, based on specific criterion'
-  - name: 'Daily Card'
-    description: 'An Daily card, like an daily law from hacker-laws'
+  - name: 'Daily Message'
+    description: 'An Daily message, like an daily law from hacker-laws'
   - name: 'Api Documentation'
     description: 'Swagger API documentation'
 paths:
@@ -91,17 +91,35 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '500':
           $ref: '#/components/responses/InternalServerError'
-  '/daily':
+  
+  '/daily-message':
     get:
       summary: 'Simple route that returns a greeting'
       description: 'This route returns a polite greeting based on Brasilia sunset and sunrise'
       tags:
-        - 'Daily Card'
+        - 'Daily Message'
+      parameters:
+        - in: query
+          name: 'fontColor'
+          schema:
+            type: string
+          description: 'The color of font that will be returned if was selected png'
+        - in: query
+          name: 'backgroundColor'
+          schema:
+            type: string
+          description: 'The color of image background that will be returned if was selected png'
+          
       responses:
         '200':
-          $ref: '#/components/responses/Greeting'
+          $ref: '#/components/responses/DailyMessage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
         '500':
           $ref: '#/components/responses/InternalServerError'
+
 components:
   responses:
     BadRequest:
@@ -148,13 +166,12 @@ components:
           schema:
             $ref: '#/components/schemas/GreetingPNG'
 
-    PoliteGreetingSVG:
-      description: A Polite Greeting in Brazilian Portuguese
+    DailyMessage:
+      description: 'An Daily Message'
       content:
-        image/*:     # Media type
-          schema: 
-            type: string
-            format: binary
+        image/png:
+          schema:
+            $ref: '#/components/schemas/DailyMessagePNG'
   
   schemas:
     Greeting:
@@ -220,13 +237,16 @@ components:
         message:
           type: string
           description: 'Greeting based on request'
-
-
     GreetingPNG:
       description: 'Polite Greeting as PNG'
       type: string
       format: binary
-
+    
+    DailyMessagePNG:
+      description: 'Polite Greeting as PNG'
+      type: string
+      format: binary
+    
     Error:
       type: object
       properties:
