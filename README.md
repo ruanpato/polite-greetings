@@ -7,3 +7,5 @@
 ## Author ##
 
 - [Ruan Pato](https://github.com/ruanpato)
+
+## Refactor this ##
