@@ -11,14 +11,14 @@ A card for your GitHub README that says good morning, good afternoon or good eve
 
 ## Use it
 
-The page at the service's root builds the URL for you, with a preview. By hand:
+[polite-greetings.ruanpato.com](https://polite-greetings.ruanpato.com) builds the URL for you, with a preview. By hand:
 
 ```html
 <picture>
   <source media="(prefers-color-scheme: dark)"
-          srcset="https://<host>/api/v2/greeting?tz=America/Sao_Paulo&amp;lat=-15.8&amp;lon=-47.9&amp;layout=sky&amp;theme=dark">
+          srcset="https://polite-greetings.ruanpato.com/api/v2/greeting?tz=America/Sao_Paulo&amp;lat=-15.8&amp;lon=-47.9&amp;layout=sky&amp;theme=dark">
   <img alt="A greeting for the time of day where I am"
-       src="https://<host>/api/v2/greeting?tz=America/Sao_Paulo&amp;lat=-15.8&amp;lon=-47.9&amp;layout=sky&amp;theme=light">
+       src="https://polite-greetings.ruanpato.com/api/v2/greeting?tz=America/Sao_Paulo&amp;lat=-15.8&amp;lon=-47.9&amp;layout=sky&amp;theme=light">
 </picture>
 ```
 
