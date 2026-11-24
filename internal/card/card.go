@@ -18,6 +18,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/ruanpato/polite-greetings/internal/astro"
 	"github.com/ruanpato/polite-greetings/internal/greeting"
 )
 
@@ -29,6 +30,7 @@ const (
 	Compact Layout = "compact" // icon and greeting in one line
 	Classic Layout = "classic" // icon, greeting and the chosen facts
 	Sky     Layout = "sky"     // greeting, local time and the sun's path
+	Cosmos  Layout = "cosmos"  // the Earth from space, the sun and the moon, beside the facts
 )
 
 // Fact is a piece of information the card can show besides the greeting.
@@ -40,6 +42,7 @@ const (
 	FactDaylength Fact = "daylength"
 	FactTime      Fact = "time"
 	FactTZ        Fact = "tz"
+	FactMoon      Fact = "moon" // Sky draws the moon at night instead of writing it
 )
 
 // Clock is how times are written.
@@ -63,7 +66,9 @@ type Options struct {
 	Clock   Clock
 	Width   int // display width in pixels; 0 keeps the layout's natural width
 	Lang    greeting.Lang
-	Zone    string // IANA name of the place's time zone, for FactTZ
+	Zone    string  // IANA name of the place's time zone, for FactTZ
+	Lat     float64 // the place, for the globe and the moon's orientation
+	Lon     float64
 }
 
 // Defaults returns the options the contract documents as defaults.
@@ -127,6 +132,7 @@ type view struct {
 	GreetingY     int
 	Lines         []line // Classic
 	Sky           skyView
+	Cosmos        cosmosView
 }
 
 type line struct {
@@ -138,6 +144,7 @@ type style struct {
 	ID     string
 	P      Palette
 	Border bool
+	Night  string // opacity of the night shade on the globe
 }
 
 type skyView struct {
@@ -146,6 +153,11 @@ type skyView struct {
 	Fill, SunX, SunY          string
 	Rise, Set, Center         string
 	Time, Zone                string
+	Moon                      *moonGlyph // drawn in the night sky when FactMoon is chosen
+}
+
+type moonGlyph struct {
+	X, Y, Lit string
 }
 
 func newView(r greeting.Result, o Options) (view, error) {
@@ -190,6 +202,9 @@ func newView(r greeting.Result, o Options) (view, error) {
 	case Sky:
 		v.W, v.H = skyW, skyH
 		v.Sky = newSky(r, o, l)
+	case Cosmos:
+		v.W, v.H = cosmosW, cosmosH
+		v.Cosmos = newCosmos(r, o, facts)
 	default:
 		return view{}, fmt.Errorf("card: unknown layout %q", o.Layout)
 	}
@@ -234,6 +249,10 @@ func texts(r greeting.Result, o Options, l labels) []string {
 	if has(FactTZ) {
 		out = append(out, zoneLabel(o.Zone, r.Now))
 	}
+	if has(FactMoon) {
+		m := astro.MoonAt(r.Now)
+		out = append(out, fmt.Sprintf(l.MoonFormat, l.Phases[m.Phase()], int(math.Round(m.Illumination*100))))
+	}
 	return out
 }
 
@@ -264,6 +283,11 @@ func newSky(r greeting.Result, o Options, l labels) skyView {
 	}
 	if has(FactTZ) {
 		s.Zone = zoneLabel(o.Zone, r.Now)
+	}
+	if has(FactMoon) && !s.Day && !s.MidnightSun {
+		const x, y, radius = 352.0, 88.0, 8.0
+		m := astro.MoonAt(r.Now)
+		s.Moon = &moonGlyph{X: num(x), Y: num(y), Lit: litPath(x, y, radius, m.Illumination, moonLitSide(m, o.Lat), 16)}
 	}
 	return s
 }

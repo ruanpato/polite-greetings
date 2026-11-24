@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" id="pg" width="240" height="48" viewBox="0 0 240 48" role="img" aria-labelledby="pg-title" xml:lang="pt-BR">
 <title id="pg-title">Boa noite.</title>
-<style>#pg .bg{fill:#0D1117;stroke:none}#pg .a{fill:#F78166}#pg .as{stroke:#F78166}#pg .t{fill:#C9D1D9}#pg .ts{stroke:#C9D1D9}#pg .k{stroke:#0D1117}</style>
+<style>#pg .bg{fill:#0D1117;stroke:none}#pg .a{fill:#F78166}#pg .as{stroke:#F78166}#pg .t{fill:#C9D1D9}#pg .ts{stroke:#C9D1D9}#pg .k{stroke:#0D1117}#pg .n{fill:#000;opacity:.5}</style>
 <rect class="bg" x=".5" y=".5" width="239" height="47" rx="24"/>
 <g transform="translate(24 24) scale(.62)"><mask id="pg-moon"><circle r="15" fill="#fff"/><circle cx="7" cy="-6" r="12.5" fill="#000"/></mask><circle class="a" r="15" mask="url(#pg-moon)"/></g>
 <text x="46" y="31" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Ubuntu, sans-serif" font-size="18" font-weight="600" class="a">Boa noite</text>

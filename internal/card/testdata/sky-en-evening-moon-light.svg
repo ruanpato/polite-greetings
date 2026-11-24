@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" id="pg" width="440" height="190" viewBox="0 0 440 190" role="img" aria-labelledby="pg-title" xml:lang="en">
+<title id="pg-title">Good evening. Sunrise 05:31. Sunset 18:27. Full moon · 100%.</title>
+<style>#pg .bg{fill:#FFFFFF;stroke:#474555;stroke-opacity:.25}#pg .a{fill:#007A5A}#pg .as{stroke:#007A5A}#pg .t{fill:#474555}#pg .ts{stroke:#474555}#pg .k{stroke:#FFFFFF}#pg .n{fill:#000;opacity:.38}</style>
+<rect class="bg" x=".5" y=".5" width="439" height="189" rx="12"/>
+<g transform="translate(44 46) scale(.85)"><mask id="pg-moon"><circle r="15" fill="#fff"/><circle cx="7" cy="-6" r="12.5" fill="#000"/></mask><circle class="a" r="15" mask="url(#pg-moon)"/></g>
+<text x="78" y="54" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Ubuntu, sans-serif" font-size="24" font-weight="600" class="a">Good evening</text>
+<line x1="24" y1="150" x2="416" y2="150" class="ts" stroke-width="1.5" opacity=".35"/>
+<path class="ts" fill="none" stroke-width="1.5" stroke-dasharray="4 6" opacity=".45" d="M40 150 A180 62 0 0 1 400 150"/>
+<circle class="t star s1" cx="118" cy="112" r="1.6"/><circle class="t star s2" cx="176" cy="96" r="1.2"/><circle class="t star s3" cx="262" cy="104" r="1.6"/><circle class="t star s4" cx="318" cy="122" r="1.2"/>
+<circle class="t" cx="352" cy="88" r="8" opacity=".22"/><path class="t" d="M352 80L353.6 80.2L355.1 80.6L356.4 81.3L357.7 82.3L358.7 83.6L359.4 84.9L359.8 86.4L360 88L359.8 89.6L359.4 91.1L358.7 92.4L357.7 93.7L356.4 94.7L355.1 95.4L353.6 95.8L352 96L352 96L350.4 95.8L349 95.4L347.6 94.7L346.4 93.7L345.4 92.4L344.7 91.1L344.2 89.6L344.1 88L344.2 86.4L344.7 84.9L345.4 83.6L346.4 82.3L347.6 81.3L349 80.6L350.4 80.2L352 80Z"/>
+<circle class="a" cx="40" cy="150" r="3"/><circle class="a" cx="400" cy="150" r="3"/>
+<text x="40" y="174" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Ubuntu, sans-serif" font-size="12" class="t">05:31</text>
+<text x="400" y="174" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Ubuntu, sans-serif" font-size="12" text-anchor="end" class="t">18:27</text>
+</svg>

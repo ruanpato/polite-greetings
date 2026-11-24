@@ -9,10 +9,12 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 	"unicode/utf8"
 
+	"github.com/ruanpato/polite-greetings/internal/astro"
 	"github.com/ruanpato/polite-greetings/internal/greeting"
 )
 
@@ -83,10 +85,26 @@ func TestGolden(t *testing.T) {
 		{"sky-en-polar-night-light", polarNight, opts(func(o *Options) {
 			o.Layout, o.Theme, o.Facts = Sky, Light, []Fact{FactSun, FactTime, FactTZ}
 		})},
+		{"sky-en-evening-moon-light", evening, opts(func(o *Options) {
+			o.Layout, o.Theme, o.Facts = Sky, Light, []Fact{FactSun, FactMoon}
+		})},
+		{"classic-pt-BR-evening-moon-auto", evening, opts(func(o *Options) {
+			o.Lang, o.Facts = greeting.Portuguese, []Fact{FactSun, FactMoon}
+		})},
+		{"cosmos-en-afternoon-light", afternoon, opts(func(o *Options) {
+			o.Layout, o.Theme, o.Facts = Cosmos, Light, []Fact{FactSun, FactDaylength, FactMoon}
+		})},
+		{"cosmos-pt-BR-evening-dark-animated", evening, opts(func(o *Options) {
+			o.Layout, o.Theme, o.Lang, o.Animate = Cosmos, Dark, greeting.Portuguese, true
+			o.Facts = []Fact{FactSun, FactTime, FactMoon}
+		})},
+		{"cosmos-es-polar-night-auto", polarNight, opts(func(o *Options) {
+			o.Layout, o.Lang, o.Facts = Cosmos, greeting.Spanish, []Fact{FactSun, FactTZ, FactMoon}
+		})},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			c.o.Zone = c.m.zone
+			c.o.Zone, c.o.Lat, c.o.Lon = c.m.zone, c.m.lat, c.m.lon
 			var buf bytes.Buffer
 			if err := Render(&buf, c.m.result(t), c.o); err != nil {
 				t.Fatal(err)
@@ -112,7 +130,7 @@ func TestGolden(t *testing.T) {
 // TestEveryCombination renders every combination of the closed options for
 // several moments, and checks that each card is well-formed XML whose texts fit.
 func TestEveryCombination(t *testing.T) {
-	all := []Fact{FactSun, FactDaylength, FactTime, FactTZ}
+	all := []Fact{FactSun, FactDaylength, FactTime, FactTZ, FactMoon}
 	var factSets [][]Fact
 	for mask := range 1 << len(all) {
 		set := []Fact{}
@@ -129,14 +147,14 @@ func TestEveryCombination(t *testing.T) {
 	}
 	n := 0
 	for _, m := range moments {
-		for _, layout := range []Layout{Compact, Classic, Sky} {
+		for _, layout := range []Layout{Compact, Classic, Sky, Cosmos} {
 			for _, theme := range []Theme{Auto, Light, Dark} {
 				for _, facts := range factSets {
 					for _, lang := range greeting.Langs {
 						for _, clk := range []Clock{Clock24, Clock12} {
 							for _, flags := range []struct{ animate, border bool }{{false, true}, {true, false}} {
 								o := Options{Layout: layout, Theme: theme, Facts: facts, Lang: lang, Clock: clk,
-									Animate: flags.animate, Border: flags.border, Zone: m.zone}
+									Animate: flags.animate, Border: flags.border, Zone: m.zone, Lat: m.lat, Lon: m.lon}
 								v, err := newView(results[m.name], o)
 								if err != nil {
 									t.Fatalf("%s %+v: %v", m.name, o, err)
@@ -215,8 +233,42 @@ func overflows(v view) []string {
 			half := width(s.Center, 12, false) / 2
 			check(220-half >= left && 220+half <= right, "center %q between %q and %q", s.Center, s.Rise, s.Set)
 		}
+	case Cosmos:
+		check(cosmosTextX+width(v.Greeting, 24, true) <= cosmosTextRight, "greeting %q", v.Greeting)
+		for _, l := range v.Cosmos.Lines {
+			check(cosmosTextX+width(l.Text, cosmosFactSize, false) <= cosmosTextRight, "line %q", l.Text)
+			check(l.Y <= cosmosH-15, "line %q below the card (y %d)", l.Text, l.Y)
+		}
 	}
 	return out
+}
+
+// TestNightFacesAwayFromTheSun checks the globe's lighting: at the place's
+// solar noon the sun is behind us, at solar midnight behind the Earth.
+func TestNightFacesAwayFromTheSun(t *testing.T) {
+	const lon = -47.93 // Brasília; solar noon about 14:58 UTC on 24 November 2026
+	for _, tt := range []struct {
+		at    time.Time
+		front bool
+	}{
+		{time.Date(2026, 11, 24, 14, 58, 0, 0, time.UTC), true},
+		{time.Date(2026, 11, 25, 2, 58, 0, 0, time.UTC), false},
+	} {
+		lat, sunLon := astro.Subsolar(tt.at)
+		_, _, z := toView(lat, sunLon, lon)
+		if tt.front && z < 0.9 || !tt.front && z > -0.9 {
+			t.Errorf("%s: sun z = %.2f, want %s", tt.at, z, map[bool]string{true: "near +1", false: "near -1"}[tt.front])
+		}
+	}
+}
+
+func TestLitPathIsClosed(t *testing.T) {
+	for _, k := range []float64{0, 0.25, 0.5, 0.75, 1} {
+		p := litPath(10, 10, 5, k, 0.3, 8)
+		if !strings.HasPrefix(p, "M") || !strings.HasSuffix(p, "Z") || strings.Count(p, "L") != 2*(8+1)-1 {
+			t.Errorf("litPath(k=%v) = %q", k, p)
+		}
+	}
 }
 
 func TestDefaultPalettesAreReadable(t *testing.T) {
@@ -237,8 +289,13 @@ func TestDefaultPalettesAreReadable(t *testing.T) {
 func TestLabelsCoverEveryLanguage(t *testing.T) {
 	for _, l := range greeting.Langs {
 		lb, ok := labelsFor[l]
-		if !ok || lb.Sunrise == "" || lb.Sunset == "" || lb.DaylightFormat == "" || lb.LocalTime == "" || lb.NoSunrise == "" || lb.NoSunset == "" {
+		if !ok || lb.Sunrise == "" || lb.Sunset == "" || lb.DaylightFormat == "" || lb.LocalTime == "" || lb.NoSunrise == "" || lb.NoSunset == "" || lb.MoonFormat == "" {
 			t.Errorf("missing labels for %s", l)
+		}
+		for _, p := range astro.Phases {
+			if lb.Phases[p] == "" {
+				t.Errorf("no name for %s in %s", p, l)
+			}
 		}
 	}
 }

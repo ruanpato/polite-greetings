@@ -56,7 +56,15 @@ func stylesFor(o Options) ([]style, error) {
 			return nil, fmt.Errorf("card: color %q is not six hex digits", c)
 		}
 	}
-	mk := func(t Theme) style { return style{ID: "pg", P: Palettes[t].with(o.Colors), Border: o.Border} }
+	mk := func(t Theme) style {
+		p := Palettes[t].with(o.Colors)
+		// The night shade darkens the globe; a dark background needs more of it.
+		night := ".5"
+		if luminance(p.Bg) > 0.4 {
+			night = ".38"
+		}
+		return style{ID: "pg", P: p, Border: o.Border, Night: night}
+	}
 	switch o.Theme {
 	case Auto:
 		return []style{mk(Light), mk(Dark)}, nil
