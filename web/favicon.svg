@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-20 -20 40 40">
+<style>.s{stroke:#007A5A}.f{fill:#007A5A}@media (prefers-color-scheme:dark){.s{stroke:#00C894}.f{fill:#00C894}}</style>
+<g class="s" stroke-width="4" stroke-linecap="round" fill="none"><line x1="-17.3" y1="10" x2="17.3" y2="10"/><line x1="-13" y1="2.5" x2="-17.3" y2="0"/><line x1="0" y1="-4" x2="0" y2="-10"/><line x1="13" y1="2.5" x2="17.3" y2="0"/></g>
+<path class="f" d="M-11 10A11 11 0 0 1 11 10Z"/>
+</svg>

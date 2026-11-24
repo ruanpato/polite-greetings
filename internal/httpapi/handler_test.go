@@ -12,6 +12,8 @@ import (
 	"testing/fstest"
 	"time"
 
+	"github.com/getkin/kin-openapi/openapi3"
+
 	"github.com/ruanpato/polite-greetings/api"
 	"github.com/ruanpato/polite-greetings/internal/oapi"
 )
@@ -26,11 +28,23 @@ func newTestHandler(t *testing.T, logs io.Writer) http.Handler {
 	if logs == nil {
 		logs = io.Discard
 	}
-	h, err := NewHandler(Config{
-		Now:    func() time.Time { return fixedNow },
-		Logger: slog.New(slog.NewJSONHandler(logs, nil)),
-		Static: fstest.MapFS{"index.html": {Data: []byte("<!doctype html><title>page</title>")}},
-	})
+	return handlerWith(t, Config{Logger: slog.New(slog.NewJSONHandler(logs, nil))})
+}
+
+// handlerWith builds the handler on a fixed clock and stand-ins for the page's
+// files, with the rest of the configuration from c.
+func handlerWith(t *testing.T, c Config) http.Handler {
+	t.Helper()
+	c.Now = func() time.Time { return fixedNow }
+	if c.Logger == nil {
+		c.Logger = slog.New(slog.NewJSONHandler(io.Discard, nil))
+	}
+	c.Static = fstest.MapFS{
+		"index.html":  {Data: []byte("<!doctype html><title>page</title>")},
+		"docs.html":   {Data: []byte("<!doctype html><title>docs</title>")},
+		"favicon.svg": {Data: []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`)},
+	}
+	h, err := NewHandler(c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -225,21 +239,82 @@ func TestInvalidParameters(t *testing.T) {
 	}
 }
 
-func TestMetaRoutesAndPage(t *testing.T) {
+func TestMetaRoutesAndPages(t *testing.T) {
 	h := newTestHandler(t, nil)
-	if rec := get(t, h, "/healthz"); rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"ok"`) {
-		t.Errorf("healthz: %d %s", rec.Code, rec.Body)
-	}
 	spec := get(t, h, "/openapi.yaml")
 	if spec.Code != http.StatusOK || !bytes.Equal(spec.Body.Bytes(), api.Spec) || spec.Header().Get("Content-Type") != "application/yaml" {
 		t.Errorf("openapi.yaml: %d, %s, %d bytes", spec.Code, spec.Header().Get("Content-Type"), spec.Body.Len())
 	}
 	page := get(t, h, "/")
-	if page.Code != http.StatusOK || !strings.Contains(page.Header().Get("Content-Security-Policy"), "default-src 'self'") {
-		t.Errorf("page: %d, CSP %q", page.Code, page.Header().Get("Content-Security-Policy"))
+	pageCSP := page.Header().Get("Content-Security-Policy")
+	if page.Code != http.StatusOK || !strings.Contains(pageCSP, "default-src 'self'") || strings.Contains(pageCSP, "jsdelivr") {
+		t.Errorf("page: %d, CSP %q", page.Code, pageCSP)
+	}
+	// The docs page is the only one allowed to load scripts from jsDelivr.
+	docs := get(t, h, "/docs")
+	docsCSP := docs.Header().Get("Content-Security-Policy")
+	if docs.Code != http.StatusOK || !strings.Contains(docs.Body.String(), "<title>docs</title>") ||
+		!strings.Contains(docsCSP, "script-src 'self' https://cdn.jsdelivr.net;") {
+		t.Errorf("docs: %d, CSP %q, body %s", docs.Code, docsCSP, docs.Body)
+	}
+	if rec := get(t, h, "/docs/"); rec.Code != http.StatusNotFound {
+		t.Errorf("/docs/: %d", rec.Code)
+	}
+	icon := get(t, h, "/favicon.svg")
+	if icon.Code != http.StatusOK || icon.Header().Get("Content-Type") != "image/svg+xml" {
+		t.Errorf("favicon: %d, %s", icon.Code, icon.Header().Get("Content-Type"))
 	}
 	if rec := get(t, h, "/api/v2/nothing"); rec.Code != http.StatusNotFound {
 		t.Errorf("unknown path: %d", rec.Code)
+	}
+}
+
+func TestHealthChecks(t *testing.T) {
+	doc, err := openapi3.NewLoader().LoadFromData(api.Spec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var logs bytes.Buffer
+	readiness := &Readiness{}
+	h := handlerWith(t, Config{
+		Logger:    slog.New(slog.NewJSONHandler(&logs, nil)),
+		Commit:    "3e86c94d6f4e1d0a8f5b2c7e9a1b3d5f7c9e0a2b",
+		Readiness: readiness,
+	})
+	check := func(path string, wantCode int, want oapi.Health) {
+		t.Helper()
+		rec := get(t, h, path)
+		var got oapi.Health
+		if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+			t.Fatalf("%s: %v in %s", path, err, rec.Body)
+		}
+		if rec.Code != wantCode || got != want {
+			t.Errorf("%s: %d %+v, want %d %+v", path, rec.Code, got, wantCode, want)
+		}
+		if cc := rec.Header().Get("Cache-Control"); cc != "no-store" {
+			t.Errorf("%s: Cache-Control %q", path, cc)
+		}
+	}
+
+	ok := oapi.Health{Status: oapi.Ok, Version: doc.Info.Version, Commit: "3e86c94d6f4e1d0a8f5b2c7e9a1b3d5f7c9e0a2b"}
+	check("/healthz", http.StatusOK, ok)
+	check("/readyz", http.StatusOK, ok)
+
+	// Shutting down: no new traffic, but the process is still alive.
+	readiness.ShutDown()
+	shuttingDown := ok
+	shuttingDown.Status = oapi.ShuttingDown
+	check("/readyz", http.StatusServiceUnavailable, shuttingDown)
+	check("/healthz", http.StatusOK, ok)
+
+	if logs.Len() > 0 {
+		t.Errorf("health checks were logged: %s", logs.String())
+	}
+
+	// Without a known commit, nor a readiness switch.
+	rec := get(t, handlerWith(t, Config{}), "/readyz")
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"commit":"unknown"`) {
+		t.Errorf("no commit: %d %s", rec.Code, rec.Body)
 	}
 }
 

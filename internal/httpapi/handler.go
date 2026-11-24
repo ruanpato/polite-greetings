@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/getkin/kin-openapi/openapi3"
@@ -22,10 +23,20 @@ import (
 
 // Config is what NewHandler needs.
 type Config struct {
-	Now    func() time.Time // the clock
-	Logger *slog.Logger
-	Static fs.FS // the page, served at /
+	Now       func() time.Time // the clock
+	Logger    *slog.Logger
+	Static    fs.FS      // the page at /, the docs at /docs and their files
+	Commit    string     // the Git commit of the build, for the health checks
+	Readiness *Readiness // flips /readyz to 503 on shutdown; nil means always ready
 }
+
+// Readiness tells /readyz whether the service still takes traffic.
+type Readiness struct{ shuttingDown atomic.Bool }
+
+// ShutDown makes /readyz answer 503 from now on.
+func (r *Readiness) ShutDown() { r.shuttingDown.Store(true) }
+
+func (r *Readiness) ready() bool { return r == nil || !r.shuttingDown.Load() }
 
 // NewHandler returns the whole HTTP handler: the API, checked against the
 // contract, and the page, behind security headers and an access log.
@@ -45,7 +56,8 @@ func NewHandler(c Config) (http.Handler, error) {
 		Skipper:               func(r *http.Request) bool { return !strings.HasPrefix(r.URL.Path, "/api/") },
 	})
 	logger := c.Logger
-	strict := oapi.NewStrictHandlerWithOptions(&Server{Now: c.Now}, nil, oapi.StrictHTTPServerOptions{
+	server := &Server{Now: c.Now, Version: doc.Info.Version, Commit: c.Commit, Readiness: c.Readiness}
+	strict := oapi.NewStrictHandlerWithOptions(server, nil, oapi.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, _ *http.Request, err error) {
 			writeProblem(w, newProblem(http.StatusBadRequest, nil, err.Error()))
 		},
@@ -57,8 +69,15 @@ func NewHandler(c Config) (http.Handler, error) {
 	mux := http.NewServeMux()
 	oapi.HandlerWithOptions(strict, oapi.StdHTTPServerOptions{BaseRouter: mux, ErrorHandlerFunc: bindingProblem})
 	mux.Handle("GET /", http.FileServerFS(c.Static))
+	mux.HandleFunc("GET /docs", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFileFS(w, r, c.Static, "docs.html")
+	})
 	return securityHeaders(accessLog(logger, headAsGet(validate(mux)))), nil
 }
+
+// isHealthCheck reports whether a path is one of the health checks, which are
+// neither cached nor logged.
+func isHealthCheck(path string) bool { return path == "/healthz" || path == "/readyz" }
 
 // headAsGet serves HEAD like GET, as HTTP expects. The contract lists GET only,
 // so the request is checked and routed as a GET; net/http still drops the body
@@ -103,27 +122,48 @@ func bindingProblem(w http.ResponseWriter, _ *http.Request, err error) {
 	writeProblem(w, newProblem(http.StatusBadRequest, []oapi.ParameterError{param}))
 }
 
-// securityHeaders sets headers that cost nothing. API responses, SVG cards
-// included, may load nothing but their own inline styles; the page may load
-// only its own files.
+// Content security policies. API responses, SVG cards included, may load
+// nothing but their own inline styles; the page may load only its own files;
+// the docs page also loads Swagger UI, pinned with SRI, from jsDelivr.
+const (
+	apiPolicy  = "default-src 'none'; style-src 'unsafe-inline'"
+	pagePolicy = "default-src 'self'; img-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+	docsPolicy = "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; " +
+		"style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data:; " +
+		"base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+)
+
+// securityHeaders sets headers that cost nothing.
 func securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h := w.Header()
 		h.Set("X-Content-Type-Options", "nosniff")
 		h.Set("Referrer-Policy", "no-referrer")
-		if r.URL.Path == "/" || strings.HasSuffix(r.URL.Path, ".html") || strings.HasSuffix(r.URL.Path, ".js") || strings.HasSuffix(r.URL.Path, ".css") {
-			h.Set("Content-Security-Policy", "default-src 'self'; img-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
-		} else {
-			h.Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'")
+		p := r.URL.Path
+		switch {
+		case p == "/docs" || p == "/docs.html":
+			h.Set("Content-Security-Policy", docsPolicy)
+		case p == "/" || strings.HasSuffix(p, ".html") || strings.HasSuffix(p, ".js") || strings.HasSuffix(p, ".css"):
+			h.Set("Content-Security-Policy", pagePolicy)
+		default:
+			h.Set("Content-Security-Policy", apiPolicy)
+		}
+		if isHealthCheck(p) {
+			h.Set("Cache-Control", "no-store")
 		}
 		next.ServeHTTP(w, r)
 	})
 }
 
-// accessLog logs one line per request. It leaves the query string out: it
+// accessLog logs one line per request, except health checks, which a container
+// runtime may call every few seconds. It leaves the query string out: it
 // carries the coordinates of whoever uses the card.
 func accessLog(logger *slog.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if isHealthCheck(r.URL.Path) {
+			next.ServeHTTP(w, r)
+			return
+		}
 		start := time.Now()
 		rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
 		next.ServeHTTP(rec, r)

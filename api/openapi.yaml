@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: polite-greetings API
-  version: 2.0.0-draft.2
+  version: 2.0.0
   summary: Greetings that know the time of day where you are.
   description: |
     polite-greetings says good morning, good afternoon or good evening at the right
@@ -37,7 +37,7 @@ tags:
   - name: greeting
     description: The greeting for a place, as an SVG card, plain text or JSON.
   - name: meta
-    description: The contract itself and the health check.
+    description: The contract itself and the health checks.
 paths:
   /api/v2/greeting:
     get:
@@ -195,16 +195,52 @@ paths:
     get:
       operationId: getHealth
       tags: [meta]
-      summary: Check that the service is up
+      summary: Liveness, the process is running
+      description: |
+        Answers while the process runs, with the contract version and the commit the
+        build came from. It checks nothing else; use `/readyz` to know whether the
+        service takes traffic.
       responses:
         '200':
-          description: The service is up.
+          description: The process is running.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Health'
               example:
                 status: ok
+                version: 2.0.0
+                commit: 3e86c94d6f4e1d0a8f5b2c7e9a1b3d5f7c9e0a2b
+  /readyz:
+    get:
+      operationId: getReadiness
+      tags: [meta]
+      summary: Readiness, the service takes traffic
+      description: |
+        Answers `200` once the service is ready, and `503` from the moment it starts
+        shutting down, so a load balancer stops sending it new requests while the ones
+        in flight finish.
+      responses:
+        '200':
+          description: The service takes traffic.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+              example:
+                status: ok
+                version: 2.0.0
+                commit: 3e86c94d6f4e1d0a8f5b2c7e9a1b3d5f7c9e0a2b
+        '503':
+          description: The service is shutting down.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+              example:
+                status: shutting-down
+                version: 2.0.0
+                commit: 3e86c94d6f4e1d0a8f5b2c7e9a1b3d5f7c9e0a2b
 components:
   parameters:
     Tz:
@@ -522,8 +558,17 @@ components:
           examples: [must be between -90 and 90]
     Health:
       type: object
-      required: [status]
+      additionalProperties: false
+      required: [status, version, commit]
       properties:
         status:
           type: string
-          enum: [ok]
+          enum: [ok, shutting-down]
+        version:
+          type: string
+          description: The version of this contract, from `info.version`.
+          examples: [2.0.0]
+        commit:
+          type: string
+          description: The Git commit the running build was made from, or `unknown`.
+          examples: [3e86c94d6f4e1d0a8f5b2c7e9a1b3d5f7c9e0a2b]
