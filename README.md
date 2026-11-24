@@ -84,7 +84,10 @@ The layout of the code:
 
 ## Run it
 
-The `Dockerfile` builds a static binary on a distroless image. The service listens on `PORT` (8080 by default) and needs nothing else: no database, no API keys.
+The service listens on `PORT` (8080 by default) and needs nothing else: no database, no API keys.
+
+- **Vercel:** `vercel.json` selects the Go framework preset, which builds `cmd/server` and serves every path from it. The Go runtime is in beta on Vercel.
+- **Any container host:** the `Dockerfile` builds a static binary on a distroless image.
 
 ## History
 
