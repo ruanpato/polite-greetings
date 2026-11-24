@@ -11,10 +11,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
 	"github.com/ruanpato/polite-greetings/api"
+	"github.com/ruanpato/polite-greetings/internal/astro"
 	"github.com/ruanpato/polite-greetings/internal/card"
 	"github.com/ruanpato/polite-greetings/internal/greeting"
 	"github.com/ruanpato/polite-greetings/internal/oapi"
@@ -106,7 +108,7 @@ func loadLocation(name string) (*time.Location, error) {
 
 func cardOptions(p oapi.GetGreetingParams, lang greeting.Lang) card.Options {
 	o := card.Defaults()
-	o.Lang, o.Zone, o.Radius = lang, p.Tz, p.Radius
+	o.Lang, o.Zone, o.Radius, o.Lat, o.Lon = lang, p.Tz, p.Radius, p.Lat, p.Lon
 	if p.Layout != nil {
 		o.Layout = card.Layout(*p.Layout)
 	}
@@ -153,10 +155,12 @@ func greetingJSON(r greeting.Result, lang greeting.Lang, zone string) oapi.Greet
 		sun.Sunrise, sun.Sunset = &rise, &set
 	}
 	if p, ok := r.Progress(); ok {
-		p = float64(int(p*1000+0.5)) / 1000
+		p = round3(p)
 		sun.Progress = &p
 	}
+	m := astro.MoonAt(r.Now)
 	return oapi.Greeting{
+		Moon:       oapi.Moon{Phase: oapi.MoonPhase(m.Phase()), Illumination: round3(m.Illumination), Waxing: m.Waxing},
 		Greeting:   greeting.Text(lang, r.Period),
 		Period:     oapi.Period(r.Period),
 		Lang:       oapi.Lang(lang),
@@ -167,6 +171,8 @@ func greetingJSON(r greeting.Result, lang greeting.Lang, zone string) oapi.Greet
 		Sun:        sun,
 	}
 }
+
+func round3(v float64) float64 { return math.Round(v*1000) / 1000 }
 
 // etagOf is a strong validator of a response body.
 func etagOf(body []byte) string {

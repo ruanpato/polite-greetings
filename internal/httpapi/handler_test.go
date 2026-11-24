@@ -123,6 +123,24 @@ func TestTextAndJSON(t *testing.T) {
 	if !g.NextChange.Equal(*g.Sun.Sunset) {
 		t.Errorf("next change %s, want the sunset %s", g.NextChange, *g.Sun.Sunset)
 	}
+	// 24 November 2026 is a full moon.
+	if g.Moon.Phase != oapi.FullMoon || g.Moon.Illumination < 0.97 {
+		t.Errorf("moon = %+v, want a full moon", g.Moon)
+	}
+}
+
+func TestCosmosCard(t *testing.T) {
+	h := newTestHandler(t, nil)
+	rec := get(t, h, "/api/v2/greeting?"+brasilia+"&layout=cosmos&show=sun,moon&lang=pt-BR")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body %s", rec.Code, rec.Body)
+	}
+	body := rec.Body.String()
+	for _, want := range []string{"Boa tarde", "Lua cheia · 100%", `clip-path="url(#pg-globe)"`, `class="n"`} {
+		if !strings.Contains(body, want) {
+			t.Errorf("cosmos card misses %q", want)
+		}
+	}
 }
 
 func TestInvalidParameters(t *testing.T) {
@@ -136,7 +154,8 @@ func TestInvalidParameters(t *testing.T) {
 		{"tz=America/Sao_Paulo&lat=abc&lon=-47.9", []string{"lat"}},
 		{"tz=America/Sao_Paulo&lat=100&lon=500", []string{"lat", "lon"}},
 		{brasilia + "&layout=poster", []string{"layout"}},
-		{brasilia + "&show=sun,moon", []string{"show"}},
+		{brasilia + "&show=sun,stars", []string{"show"}},
+		{brasilia + "&layout=globe", []string{"layout"}},
 		{brasilia + "&show=", []string{"show"}},
 		{brasilia + "&bg=%23FFFFFF", []string{"bg"}},
 		{brasilia + "&width=50", []string{"width"}},
