@@ -38,6 +38,7 @@ func (e Clock) Valid() bool {
 // Defines values for Fact.
 const (
 	FactDaylength Fact = "daylength"
+	FactMoon      Fact = "moon"
 	FactSun       Fact = "sun"
 	FactTime      Fact = "time"
 	FactTz        Fact = "tz"
@@ -47,6 +48,8 @@ const (
 func (e Fact) Valid() bool {
 	switch e {
 	case FactDaylength:
+		return true
+	case FactMoon:
 		return true
 	case FactSun:
 		return true
@@ -120,6 +123,7 @@ func (e Lang) Valid() bool {
 const (
 	Classic Layout = "classic"
 	Compact Layout = "compact"
+	Cosmos  Layout = "cosmos"
 	Sky     Layout = "sky"
 )
 
@@ -130,7 +134,45 @@ func (e Layout) Valid() bool {
 		return true
 	case Compact:
 		return true
+	case Cosmos:
+		return true
 	case Sky:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MoonPhase.
+const (
+	FirstQuarter   MoonPhase = "first-quarter"
+	FullMoon       MoonPhase = "full-moon"
+	LastQuarter    MoonPhase = "last-quarter"
+	NewMoon        MoonPhase = "new-moon"
+	WaningCrescent MoonPhase = "waning-crescent"
+	WaningGibbous  MoonPhase = "waning-gibbous"
+	WaxingCrescent MoonPhase = "waxing-crescent"
+	WaxingGibbous  MoonPhase = "waxing-gibbous"
+)
+
+// Valid indicates whether the value is a known member of the MoonPhase enum.
+func (e MoonPhase) Valid() bool {
+	switch e {
+	case FirstQuarter:
+		return true
+	case FullMoon:
+		return true
+	case LastQuarter:
+		return true
+	case NewMoon:
+		return true
+	case WaningCrescent:
+		return true
+	case WaningGibbous:
+		return true
+	case WaxingCrescent:
+		return true
+	case WaxingGibbous:
 		return true
 	default:
 		return false
@@ -219,6 +261,7 @@ type Greeting struct {
 
 	// LocalTime Time at the place when the response was made.
 	LocalTime time.Time `json:"localTime"`
+	Moon      Moon      `json:"moon"`
 
 	// NextChange When the greeting changes next.
 	NextChange time.Time `json:"nextChange"`
@@ -248,6 +291,23 @@ type Lang string
 
 // Layout defines model for Layout.
 type Layout string
+
+// Moon defines model for Moon.
+type Moon struct {
+	// Illumination Share of the moon's disk that is lit, as seen from the Earth.
+	Illumination float64 `json:"illumination"`
+
+	// Phase Named by the lit share: `new-moon` below 3%, `full-moon` above 97%, the quarters
+	// within 5 points of half, crescent and gibbous in between.
+	Phase MoonPhase `json:"phase"`
+
+	// Waxing Whether the lit share is growing, from new moon to full moon.
+	Waxing bool `json:"waxing"`
+}
+
+// MoonPhase Named by the lit share: `new-moon` below 3%, `full-moon` above 97%, the quarters
+// within 5 points of half, crescent and gibbous in between.
+type MoonPhase string
 
 // ParameterError defines model for ParameterError.
 type ParameterError struct {
@@ -357,6 +417,9 @@ type GetGreetingParams struct {
 	// - `compact`: icon and greeting in one line, like a badge.
 	// - `classic`: icon, greeting and the facts chosen in `show`.
 	// - `sky`: greeting, local time and the sun's path across the day, with where the sun is now.
+	// - `cosmos`: the Earth from space, with night where it is night now, a band at the
+	//   place's latitude, the sun on an orbit in the direction of its light, and the moon
+	//   in today's phase. The facts go beside the globe.
 	Layout *Layout `form:"layout,omitempty" json:"layout,omitempty"`
 
 	// Show Facts to show on the card, comma-separated, in any order, at least one. The card
@@ -366,6 +429,8 @@ type GetGreetingParams struct {
 	// - `daylength`: hours of daylight today.
 	// - `time`: local time when the card was made.
 	// - `tz`: the place's time zone and UTC offset.
+	// - `moon`: the moon's phase and how much of it is lit. `sky` draws the moon in the
+	//   night sky instead of writing it.
 	Show *Show `form:"show,omitempty" json:"show,omitempty"`
 
 	// Theme Colors. `auto` follows the viewer's light or dark preference. To follow the theme

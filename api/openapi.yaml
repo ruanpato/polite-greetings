@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: polite-greetings API
-  version: 2.0.0-draft.1
+  version: 2.0.0-draft.2
   summary: Greetings that know the time of day where you are.
   description: |
     polite-greetings says good morning, good afternoon or good evening at the right
@@ -105,6 +105,10 @@ paths:
                       sunrise: '2026-11-24T05:31:00-03:00'
                       sunset: '2026-11-24T18:27:00-03:00'
                       daylightMinutes: 776
+                    moon:
+                      phase: full-moon
+                      illumination: 0.997
+                      waxing: false
                 afternoon:
                   summary: Brasília, 15:00
                   value:
@@ -121,6 +125,10 @@ paths:
                       sunset: '2026-11-24T18:27:00-03:00'
                       daylightMinutes: 776
                       progress: 0.733
+                    moon:
+                      phase: full-moon
+                      illumination: 0.998
+                      waxing: false
                 polarNight:
                   summary: Tromsø, 15 December, 12:00
                   value:
@@ -134,6 +142,10 @@ paths:
                     sun:
                       state: polar-night
                       daylightMinutes: 0
+                    moon:
+                      phase: waxing-crescent
+                      illumination: 0.334
+                      waxing: true
         '304':
           description: The response has not changed since the `ETag` sent in `If-None-Match`.
           headers:
@@ -248,6 +260,9 @@ components:
         - `compact`: icon and greeting in one line, like a badge.
         - `classic`: icon, greeting and the facts chosen in `show`.
         - `sky`: greeting, local time and the sun's path across the day, with where the sun is now.
+        - `cosmos`: the Earth from space, with night where it is night now, a band at the
+          place's latitude, the sun on an orbit in the direction of its light, and the moon
+          in today's phase. The facts go beside the globe.
       schema:
         $ref: '#/components/schemas/Layout'
     Show:
@@ -261,13 +276,15 @@ components:
         - `daylength`: hours of daylight today.
         - `time`: local time when the card was made.
         - `tz`: the place's time zone and UTC offset.
+        - `moon`: the moon's phase and how much of it is lit. `sky` draws the moon in the
+          night sky instead of writing it.
       style: form
       explode: false
       schema:
         type: array
         uniqueItems: true
         minItems: 1
-        maxItems: 4
+        maxItems: 5
         items:
           $ref: '#/components/schemas/Fact'
         default: [sun]
@@ -365,11 +382,11 @@ components:
       default: svg
     Layout:
       type: string
-      enum: [compact, classic, sky]
+      enum: [compact, classic, sky, cosmos]
       default: classic
     Fact:
       type: string
-      enum: [sun, daylength, time, tz]
+      enum: [sun, daylength, time, tz, moon]
     Theme:
       type: string
       enum: [auto, light, dark]
@@ -394,7 +411,7 @@ components:
     Greeting:
       type: object
       additionalProperties: false
-      required: [greeting, period, lang, timezone, utcOffset, localTime, nextChange, sun]
+      required: [greeting, period, lang, timezone, utcOffset, localTime, nextChange, sun, moon]
       properties:
         greeting:
           type: string
@@ -421,6 +438,30 @@ components:
           description: When the greeting changes next.
         sun:
           $ref: '#/components/schemas/Sun'
+        moon:
+          $ref: '#/components/schemas/Moon'
+    Moon:
+      type: object
+      additionalProperties: false
+      required: [phase, illumination, waxing]
+      properties:
+        phase:
+          $ref: '#/components/schemas/MoonPhase'
+        illumination:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: Share of the moon's disk that is lit, as seen from the Earth.
+        waxing:
+          type: boolean
+          description: Whether the lit share is growing, from new moon to full moon.
+    MoonPhase:
+      type: string
+      description: |
+        Named by the lit share: `new-moon` below 3%, `full-moon` above 97%, the quarters
+        within 5 points of half, crescent and gibbous in between.
+      enum: [new-moon, waxing-crescent, first-quarter, waxing-gibbous, full-moon, waning-gibbous, last-quarter, waning-crescent]
     Sun:
       type: object
       additionalProperties: false
