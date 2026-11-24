@@ -28,7 +28,10 @@ const cacheControl = "no-cache"
 
 // Server implements the operations of the contract.
 type Server struct {
-	Now func() time.Time // the clock; tests fix it
+	Now       func() time.Time // the clock; tests fix it
+	Version   string           // the contract's info.version
+	Commit    string           // the Git commit of the build
+	Readiness *Readiness
 }
 
 var _ oapi.StrictServerInterface = (*Server)(nil)
@@ -84,9 +87,27 @@ func (s *Server) GetGreeting(_ context.Context, req oapi.GetGreetingRequestObjec
 	}
 }
 
-// GetHealth reports that the service is up.
+// GetHealth reports that the process runs, with the contract version and the
+// commit of the build.
 func (s *Server) GetHealth(context.Context, oapi.GetHealthRequestObject) (oapi.GetHealthResponseObject, error) {
-	return oapi.GetHealth200JSONResponse{Status: oapi.Ok}, nil
+	return oapi.GetHealth200JSONResponse(s.health(oapi.Ok)), nil
+}
+
+// GetReadiness reports whether the service takes traffic: 503 once it has
+// started shutting down.
+func (s *Server) GetReadiness(context.Context, oapi.GetReadinessRequestObject) (oapi.GetReadinessResponseObject, error) {
+	if !s.Readiness.ready() {
+		return oapi.GetReadiness503JSONResponse(s.health(oapi.ShuttingDown)), nil
+	}
+	return oapi.GetReadiness200JSONResponse(s.health(oapi.Ok)), nil
+}
+
+func (s *Server) health(status oapi.HealthStatus) oapi.Health {
+	commit := s.Commit
+	if commit == "" {
+		commit = "unknown"
+	}
+	return oapi.Health{Status: status, Version: s.Version, Commit: commit}
 }
 
 // GetOpenAPIDocument serves the contract.

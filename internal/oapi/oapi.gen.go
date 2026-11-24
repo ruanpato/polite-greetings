@@ -85,13 +85,16 @@ func (e Format) Valid() bool {
 
 // Defines values for HealthStatus.
 const (
-	Ok HealthStatus = "ok"
+	Ok           HealthStatus = "ok"
+	ShuttingDown HealthStatus = "shutting-down"
 )
 
 // Valid indicates whether the value is a known member of the HealthStatus enum.
 func (e HealthStatus) Valid() bool {
 	switch e {
 	case Ok:
+		return true
+	case ShuttingDown:
 		return true
 	default:
 		return false
@@ -277,7 +280,16 @@ type Greeting struct {
 
 // Health defines model for Health.
 type Health struct {
+	// Commit The Git commit the running build was made from, or `unknown`.
+	//
+	// Examples: 3e86c94d6f4e1d0a8f5b2c7e9a1b3d5f7c9e0a2b
+	Commit string       `json:"commit"`
 	Status HealthStatus `json:"status"`
+
+	// Version The version of this contract, from `info.version`.
+	//
+	// Examples: 2.0.0
+	Version string `json:"version"`
 }
 
 // HealthStatus defines model for Health.Status.
@@ -470,12 +482,15 @@ type ServerInterface interface {
 	// GetGreeting Get the greeting for a place right now
 	// (GET /api/v2/greeting)
 	GetGreeting(w http.ResponseWriter, r *http.Request, params GetGreetingParams)
-	// GetHealth Check that the service is up
+	// GetHealth Liveness, the process is running
 	// (GET /healthz)
 	GetHealth(w http.ResponseWriter, r *http.Request)
 	// GetOpenAPIDocument Get this contract
 	// (GET /openapi.yaml)
 	GetOpenAPIDocument(w http.ResponseWriter, r *http.Request)
+	// GetReadiness Readiness, the service takes traffic
+	// (GET /readyz)
+	GetReadiness(w http.ResponseWriter, r *http.Request)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -764,6 +779,20 @@ func (siw *ServerInterfaceWrapper) GetOpenAPIDocument(w http.ResponseWriter, r *
 	handler.ServeHTTP(w, r)
 }
 
+// GetReadiness operation middleware
+func (siw *ServerInterfaceWrapper) GetReadiness(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetReadiness(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 type UnescapedCookieParamError struct {
 	ParamName string
 	Err       error
@@ -887,6 +916,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v2/greeting", wrapper.GetGreeting)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/openapi.yaml", wrapper.GetOpenAPIDocument)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/healthz", wrapper.GetHealth)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/readyz", wrapper.GetReadiness)
 
 	return m
 }
@@ -1128,17 +1158,55 @@ func (response GetOpenAPIDocument200ApplicationyamlResponse) VisitGetOpenAPIDocu
 	return err
 }
 
+type GetReadinessRequestObject struct {
+}
+
+type GetReadinessResponseObject interface {
+	VisitGetReadinessResponse(w http.ResponseWriter) error
+}
+
+type GetReadiness200JSONResponse Health
+
+func (response GetReadiness200JSONResponse) VisitGetReadinessResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetReadiness503JSONResponse Health
+
+func (response GetReadiness503JSONResponse) VisitGetReadinessResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := runtime.JSONMarshalWrite(&buf, response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// GetGreeting Get the greeting for a place right now
 	// (GET /api/v2/greeting)
 	GetGreeting(ctx context.Context, request GetGreetingRequestObject) (GetGreetingResponseObject, error)
-	// GetHealth Check that the service is up
+	// GetHealth Liveness, the process is running
 	// (GET /healthz)
 	GetHealth(ctx context.Context, request GetHealthRequestObject) (GetHealthResponseObject, error)
 	// GetOpenAPIDocument Get this contract
 	// (GET /openapi.yaml)
 	GetOpenAPIDocument(ctx context.Context, request GetOpenAPIDocumentRequestObject) (GetOpenAPIDocumentResponseObject, error)
+	// GetReadiness Readiness, the service takes traffic
+	// (GET /readyz)
+	GetReadiness(ctx context.Context, request GetReadinessRequestObject) (GetReadinessResponseObject, error)
 }
 
 // StrictHandlerFunc and StrictMiddlewareFunc are type aliases rather than
@@ -1250,6 +1318,30 @@ func (sh *strictHandler) GetOpenAPIDocument(w http.ResponseWriter, r *http.Reque
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetOpenAPIDocumentResponseObject); ok {
 		if err := validResponse.VisitGetOpenAPIDocumentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetReadiness operation middleware
+func (sh *strictHandler) GetReadiness(w http.ResponseWriter, r *http.Request) {
+	var request GetReadinessRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {
+		return sh.ssi.GetReadiness(ctx, request.(GetReadinessRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetReadiness")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetReadinessResponseObject); ok {
+		if err := validResponse.VisitGetReadinessResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
