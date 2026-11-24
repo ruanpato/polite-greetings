@@ -1,0 +1,529 @@
+openapi: 3.1.0
+info:
+  title: polite-greetings API
+  version: 2.0.0-draft.2
+  summary: Greetings that know the time of day where you are.
+  description: |
+    polite-greetings says good morning, good afternoon or good evening at the right
+    time for a place, by the sun and by the local clock. It renders the greeting as an
+    SVG card for GitHub READMEs, or returns it as plain text or JSON.
+
+    ## How it decides
+
+    - Morning runs from sunrise until 12:00 on the local clock.
+    - Afternoon runs from 12:00 until sunset.
+    - Evening runs from sunset until the next sunrise.
+    - Where the sun does not rise or set that day (polar night, midnight sun), the
+      clock decides: 06:00, 12:00 and 18:00.
+
+    ## Privacy
+
+    The coordinates end up in the image URL of a public README. Use your city, not
+    your address. No free text from the URL is ever drawn on the card.
+
+    ## Caching
+
+    Successful responses carry `Cache-Control: no-cache` and a strong `ETag`. Send
+    `If-None-Match` to get `304 Not Modified` while the response has not changed.
+    GitHub's image proxy does this on every page view.
+  license:
+    name: Apache 2.0
+    identifier: Apache-2.0
+servers:
+  - url: /
+    description: The host that serves this document.
+security: []
+tags:
+  - name: greeting
+    description: The greeting for a place, as an SVG card, plain text or JSON.
+  - name: meta
+    description: The contract itself and the health check.
+paths:
+  /api/v2/greeting:
+    get:
+      operationId: getGreeting
+      tags: [greeting]
+      summary: Get the greeting for a place right now
+      description: |
+        Returns the greeting for the current time of day at a place.
+
+        `format` picks the representation, because an `<img>` tag cannot choose the
+        `Accept` header. The card options (`layout`, `show`, `theme`, `bg`, `accent`,
+        `text`, `radius`, `border`, `animate`, `clock` and `width`) only change
+        `format=svg`.
+      parameters:
+        - $ref: '#/components/parameters/Tz'
+        - $ref: '#/components/parameters/Lat'
+        - $ref: '#/components/parameters/Lon'
+        - $ref: '#/components/parameters/Lang'
+        - $ref: '#/components/parameters/Format'
+        - $ref: '#/components/parameters/Layout'
+        - $ref: '#/components/parameters/Show'
+        - $ref: '#/components/parameters/Theme'
+        - $ref: '#/components/parameters/Bg'
+        - $ref: '#/components/parameters/Accent'
+        - $ref: '#/components/parameters/Text'
+        - $ref: '#/components/parameters/Radius'
+        - $ref: '#/components/parameters/Border'
+        - $ref: '#/components/parameters/Animate'
+        - $ref: '#/components/parameters/Clock'
+        - $ref: '#/components/parameters/Width'
+        - $ref: '#/components/parameters/IfNoneMatch'
+      responses:
+        '200':
+          description: The greeting, in the representation chosen by `format`.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            image/svg+xml; charset=utf-8:
+              schema:
+                type: string
+              example: '<svg xmlns="http://www.w3.org/2000/svg" width="440" height="100" viewBox="0 0 440 100" role="img" aria-labelledby="pg-t" xml:lang="en"><title id="pg-t">Good evening. Sunrise 05:31 · Sunset 18:27.</title>…</svg>'
+            text/plain; charset=utf-8:
+              schema:
+                type: string
+              example: Good evening
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Greeting'
+              examples:
+                evening:
+                  summary: Brasília, 21:04
+                  value:
+                    greeting: Good evening
+                    period: evening
+                    lang: en
+                    timezone: America/Sao_Paulo
+                    utcOffset: '-03:00'
+                    localTime: '2026-11-24T21:04:00-03:00'
+                    nextChange: '2026-11-25T05:31:00-03:00'
+                    sun:
+                      state: normal
+                      sunrise: '2026-11-24T05:31:00-03:00'
+                      sunset: '2026-11-24T18:27:00-03:00'
+                      daylightMinutes: 776
+                    moon:
+                      phase: full-moon
+                      illumination: 0.997
+                      waxing: false
+                afternoon:
+                  summary: Brasília, 15:00
+                  value:
+                    greeting: Good afternoon
+                    period: afternoon
+                    lang: en
+                    timezone: America/Sao_Paulo
+                    utcOffset: '-03:00'
+                    localTime: '2026-11-24T15:00:00-03:00'
+                    nextChange: '2026-11-24T18:27:00-03:00'
+                    sun:
+                      state: normal
+                      sunrise: '2026-11-24T05:31:00-03:00'
+                      sunset: '2026-11-24T18:27:00-03:00'
+                      daylightMinutes: 776
+                      progress: 0.733
+                    moon:
+                      phase: full-moon
+                      illumination: 0.998
+                      waxing: false
+                polarNight:
+                  summary: Tromsø, 15 December, 12:00
+                  value:
+                    greeting: Good afternoon
+                    period: afternoon
+                    lang: en
+                    timezone: Europe/Oslo
+                    utcOffset: '+01:00'
+                    localTime: '2026-12-15T12:00:00+01:00'
+                    nextChange: '2026-12-15T18:00:00+01:00'
+                    sun:
+                      state: polar-night
+                      daylightMinutes: 0
+                    moon:
+                      phase: waxing-crescent
+                      illumination: 0.334
+                      waxing: true
+        '304':
+          description: The response has not changed since the `ETag` sent in `If-None-Match`.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+        '400':
+          description: A parameter is missing or invalid.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: about:blank
+                title: Bad Request
+                status: 400
+                detail: 2 query parameters are invalid.
+                errors:
+                  - parameter: lat
+                    detail: must be between -90 and 90
+                  - parameter: tz
+                    detail: unknown IANA time zone "America/Atlantis"
+        default:
+          description: Unexpected error.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: about:blank
+                title: Internal Server Error
+                status: 500
+  /openapi.yaml:
+    get:
+      operationId: getOpenAPIDocument
+      tags: [meta]
+      summary: Get this contract
+      responses:
+        '200':
+          description: This OpenAPI document.
+          content:
+            application/yaml:
+              schema:
+                type: string
+  /healthz:
+    get:
+      operationId: getHealth
+      tags: [meta]
+      summary: Check that the service is up
+      responses:
+        '200':
+          description: The service is up.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+              example:
+                status: ok
+components:
+  parameters:
+    Tz:
+      name: tz
+      in: query
+      required: true
+      description: IANA time zone of the place. Sets the local clock.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 64
+        pattern: '^[A-Za-z][A-Za-z0-9_+-]*(/[A-Za-z0-9_+-]+){0,2}$'
+      example: America/Sao_Paulo
+    Lat:
+      name: lat
+      in: query
+      required: true
+      description: Latitude in decimal degrees. Sets sunrise and sunset. Use your city, not your address.
+      schema:
+        type: number
+        format: double
+        minimum: -90
+        maximum: 90
+      example: -15.8
+    Lon:
+      name: lon
+      in: query
+      required: true
+      description: Longitude in decimal degrees. Use your city, not your address.
+      schema:
+        type: number
+        format: double
+        minimum: -180
+        maximum: 180
+      example: -47.9
+    Lang:
+      name: lang
+      in: query
+      description: Language of the greeting and of the card.
+      schema:
+        $ref: '#/components/schemas/Lang'
+    Format:
+      name: format
+      in: query
+      description: Representation to return.
+      schema:
+        $ref: '#/components/schemas/Format'
+    Layout:
+      name: layout
+      in: query
+      description: |
+        Card layout.
+        - `compact`: icon and greeting in one line, like a badge.
+        - `classic`: icon, greeting and the facts chosen in `show`.
+        - `sky`: greeting, local time and the sun's path across the day, with where the sun is now.
+        - `cosmos`: the Earth from space, with night where it is night now, a band at the
+          place's latitude, the sun on an orbit in the direction of its light, and the moon
+          in today's phase. The facts go beside the globe.
+      schema:
+        $ref: '#/components/schemas/Layout'
+    Show:
+      name: show
+      in: query
+      description: |
+        Facts to show on the card, comma-separated, in any order, at least one. The card
+        always shows them in the order below. `compact` ignores this parameter; use it for
+        a card with the greeting only.
+        - `sun`: sunrise and sunset times.
+        - `daylength`: hours of daylight today.
+        - `time`: local time when the card was made.
+        - `tz`: the place's time zone and UTC offset.
+        - `moon`: the moon's phase and how much of it is lit. `sky` draws the moon in the
+          night sky instead of writing it.
+      style: form
+      explode: false
+      schema:
+        type: array
+        uniqueItems: true
+        minItems: 1
+        maxItems: 5
+        items:
+          $ref: '#/components/schemas/Fact'
+        default: [sun]
+      example: [sun, daylength, time]
+    Theme:
+      name: theme
+      in: query
+      description: |
+        Colors. `auto` follows the viewer's light or dark preference. To follow the theme
+        chosen on GitHub instead, request `light` and `dark` inside a `<picture>` element.
+      schema:
+        $ref: '#/components/schemas/Theme'
+    Bg:
+      name: bg
+      in: query
+      description: Background color as six hex digits, without `#`. Overrides the theme.
+      schema:
+        $ref: '#/components/schemas/HexColor'
+      example: 0D1117
+    Accent:
+      name: accent
+      in: query
+      description: Color of the greeting, the icon and the sun, as six hex digits, without `#`. Overrides the theme.
+      schema:
+        $ref: '#/components/schemas/HexColor'
+      example: F78166
+    Text:
+      name: text
+      in: query
+      description: Color of the facts and labels, as six hex digits, without `#`. Overrides the theme.
+      schema:
+        $ref: '#/components/schemas/HexColor'
+      example: C9D1D9
+    Radius:
+      name: radius
+      in: query
+      description: Corner radius in card units. Defaults to 24 for `compact` and 12 for the other layouts. Capped at half the card height.
+      schema:
+        type: integer
+        minimum: 0
+        maximum: 24
+    Border:
+      name: border
+      in: query
+      description: Draw a thin border around the card.
+      schema:
+        type: boolean
+        default: true
+    Animate:
+      name: animate
+      in: query
+      description: Add a subtle animation (sun glow, turning rays, twinkling stars). It stops for viewers who ask for reduced motion.
+      schema:
+        type: boolean
+        default: false
+    Clock:
+      name: clock
+      in: query
+      description: How times are written. `12h` writes them as `9:04 PM` in every language.
+      schema:
+        $ref: '#/components/schemas/Clock'
+    Width:
+      name: width
+      in: query
+      description: Display width in pixels. The card keeps its proportions. Defaults to 240 for `compact` and 440 for the other layouts.
+      schema:
+        type: integer
+        minimum: 120
+        maximum: 1200
+    IfNoneMatch:
+      name: If-None-Match
+      in: header
+      description: The `ETag` of a response you already have.
+      schema:
+        type: string
+  headers:
+    ETag:
+      description: Strong validator of the response body.
+      schema:
+        type: string
+      example: '"5c2f0b7e9a41d3c8"'
+    CacheControl:
+      description: Always `no-cache`, so caches check back before reusing the response.
+      schema:
+        type: string
+      example: no-cache
+  schemas:
+    Lang:
+      type: string
+      enum: [en, pt-BR, es]
+      default: en
+    Format:
+      type: string
+      enum: [svg, txt, json]
+      default: svg
+    Layout:
+      type: string
+      enum: [compact, classic, sky, cosmos]
+      default: classic
+    Fact:
+      type: string
+      enum: [sun, daylength, time, tz, moon]
+    Theme:
+      type: string
+      enum: [auto, light, dark]
+      default: auto
+    Clock:
+      type: string
+      enum: [24h, 12h]
+      default: 24h
+    HexColor:
+      type: string
+      pattern: '^[0-9A-Fa-f]{6}$'
+    Period:
+      type: string
+      enum: [morning, afternoon, evening]
+    SunState:
+      type: string
+      description: |
+        - `normal`: the sun rises and sets today.
+        - `polar-night`: the sun does not rise today.
+        - `midnight-sun`: the sun does not set today.
+      enum: [normal, polar-night, midnight-sun]
+    Greeting:
+      type: object
+      additionalProperties: false
+      required: [greeting, period, lang, timezone, utcOffset, localTime, nextChange, sun, moon]
+      properties:
+        greeting:
+          type: string
+          description: The greeting, in the requested language.
+          examples: [Good evening]
+        period:
+          $ref: '#/components/schemas/Period'
+        lang:
+          $ref: '#/components/schemas/Lang'
+        timezone:
+          type: string
+          examples: [America/Sao_Paulo]
+        utcOffset:
+          type: string
+          pattern: '^[+-][0-9]{2}:[0-9]{2}$'
+          examples: ['-03:00']
+        localTime:
+          type: string
+          format: date-time
+          description: Time at the place when the response was made.
+        nextChange:
+          type: string
+          format: date-time
+          description: When the greeting changes next.
+        sun:
+          $ref: '#/components/schemas/Sun'
+        moon:
+          $ref: '#/components/schemas/Moon'
+    Moon:
+      type: object
+      additionalProperties: false
+      required: [phase, illumination, waxing]
+      properties:
+        phase:
+          $ref: '#/components/schemas/MoonPhase'
+        illumination:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: Share of the moon's disk that is lit, as seen from the Earth.
+        waxing:
+          type: boolean
+          description: Whether the lit share is growing, from new moon to full moon.
+    MoonPhase:
+      type: string
+      description: |
+        Named by the lit share: `new-moon` below 3%, `full-moon` above 97%, the quarters
+        within 5 points of half, crescent and gibbous in between.
+      enum: [new-moon, waxing-crescent, first-quarter, waxing-gibbous, full-moon, waning-gibbous, last-quarter, waning-crescent]
+    Sun:
+      type: object
+      additionalProperties: false
+      required: [state, daylightMinutes]
+      properties:
+        state:
+          $ref: '#/components/schemas/SunState'
+        sunrise:
+          type: string
+          format: date-time
+          description: Today's sunrise. Absent when `state` is not `normal`.
+        sunset:
+          type: string
+          format: date-time
+          description: Today's sunset. Absent when `state` is not `normal`.
+        daylightMinutes:
+          type: integer
+          minimum: 0
+          maximum: 1440
+          description: Minutes between sunrise and sunset today.
+        progress:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: Share of today's daylight that has passed. Present only while the sun is up and `state` is `normal`.
+    Problem:
+      type: object
+      description: Problem details, as in RFC 9457.
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri-reference
+          default: about:blank
+        title:
+          type: string
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        detail:
+          type: string
+        errors:
+          type: array
+          description: One entry per invalid parameter.
+          items:
+            $ref: '#/components/schemas/ParameterError'
+    ParameterError:
+      type: object
+      required: [parameter, detail]
+      properties:
+        parameter:
+          type: string
+          examples: [lat]
+        detail:
+          type: string
+          examples: [must be between -90 and 90]
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok]

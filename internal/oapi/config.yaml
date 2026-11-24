@@ -1,0 +1,7 @@
+# Configuration for oapi-codegen. Run `go generate ./...` after changing api/openapi.yaml.
+package: oapi
+output: oapi.gen.go
+generate:
+  models: true
+  std-http-server: true
+  strict-server: true

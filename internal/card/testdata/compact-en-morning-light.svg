@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" id="pg" width="240" height="48" viewBox="0 0 240 48" role="img" aria-labelledby="pg-title" xml:lang="en">
+<title id="pg-title">Good morning.</title>
+<style>#pg .bg{fill:#FFFFFF;stroke:#474555;stroke-opacity:.25}#pg .a{fill:#007A5A}#pg .as{stroke:#007A5A}#pg .t{fill:#474555}#pg .ts{stroke:#474555}#pg .k{stroke:#FFFFFF}#pg .n{fill:#000;opacity:.38}</style>
+<rect class="bg" x=".5" y=".5" width="239" height="47" rx="24"/>
+<g transform="translate(24 24) scale(.62)"><g class="as" stroke-width="2.5" stroke-linecap="round" fill="none"><line x1="-21" y1="10" x2="21" y2="10"/><line x1="-12.99" y1="2.5" x2="-17.32" y2="0"/><line x1="-7.5" y1="-2.99" x2="-10" y2="-7.32"/><line x1="0" y1="-5" x2="0" y2="-10"/><line x1="7.5" y1="-2.99" x2="10" y2="-7.32"/><line x1="12.99" y1="2.5" x2="17.32" y2="0"/></g><path class="a" d="M-11 10A11 11 0 0 1 11 10Z"/></g>
+<text x="46" y="31" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Ubuntu, sans-serif" font-size="18" font-weight="600" class="a">Good morning</text>
+</svg>

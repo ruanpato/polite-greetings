@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" id="pg" width="440" height="120" viewBox="0 0 440 120" role="img" aria-labelledby="pg-title" xml:lang="pt-BR">
+<title id="pg-title">Boa noite. Nascer do sol 05:31. Pôr do sol 18:27. Lua cheia · 100%.</title>
+<style>#pg .bg{fill:#FFFFFF;stroke:#474555;stroke-opacity:.25}#pg .a{fill:#007A5A}#pg .as{stroke:#007A5A}#pg .t{fill:#474555}#pg .ts{stroke:#474555}#pg .k{stroke:#FFFFFF}#pg .n{fill:#000;opacity:.38}@media (prefers-color-scheme:dark){#pg .bg{fill:#474555;stroke:#C8FCEA;stroke-opacity:.25}#pg .a{fill:#00C894}#pg .as{stroke:#00C894}#pg .t{fill:#C8FCEA}#pg .ts{stroke:#C8FCEA}#pg .k{stroke:#474555}#pg .n{fill:#000;opacity:.5}}</style>
+<rect class="bg" x=".5" y=".5" width="439" height="119" rx="12"/>
+<g transform="translate(50 50)"><mask id="pg-moon"><circle r="15" fill="#fff"/><circle cx="7" cy="-6" r="12.5" fill="#000"/></mask><circle class="a" r="15" mask="url(#pg-moon)"/></g>
+<text x="96" y="50" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Ubuntu, sans-serif" font-size="28" font-weight="600" class="a">Boa noite</text>
+<text x="96" y="76" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Ubuntu, sans-serif" font-size="14" class="t">Nascer do sol 05:31 · Pôr do sol 18:27</text>
+<text x="96" y="96" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Ubuntu, sans-serif" font-size="14" class="t">Lua cheia · 100%</text>
+</svg>
