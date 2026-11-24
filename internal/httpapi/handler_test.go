@@ -96,6 +96,41 @@ func TestConditionalRequests(t *testing.T) {
 	}
 }
 
+// TestHead checks that HEAD answers like GET, without the body, over a real
+// connection (the recorder used elsewhere does not drop HEAD bodies).
+func TestHead(t *testing.T) {
+	srv := httptest.NewServer(newTestHandler(t, nil))
+	defer srv.Close()
+	url := srv.URL + "/api/v2/greeting?" + brasilia
+	getResp, err := http.Get(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	getResp.Body.Close()
+	etag := getResp.Header.Get("ETag")
+
+	for _, ifNoneMatch := range []string{"", etag} {
+		req, _ := http.NewRequest(http.MethodHead, url, nil)
+		if ifNoneMatch != "" {
+			req.Header.Set("If-None-Match", ifNoneMatch)
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		want := http.StatusOK
+		if ifNoneMatch != "" {
+			want = http.StatusNotModified
+		}
+		if resp.StatusCode != want || len(body) != 0 || resp.Header.Get("ETag") != etag {
+			t.Errorf("HEAD (If-None-Match %q): status %d, %d body bytes, ETag %q; want %d, no body, %q",
+				ifNoneMatch, resp.StatusCode, len(body), resp.Header.Get("ETag"), want, etag)
+		}
+	}
+}
+
 func TestTextAndJSON(t *testing.T) {
 	h := newTestHandler(t, nil)
 	txt := get(t, h, "/api/v2/greeting?"+brasilia+"&format=txt&lang=es")

@@ -57,7 +57,20 @@ func NewHandler(c Config) (http.Handler, error) {
 	mux := http.NewServeMux()
 	oapi.HandlerWithOptions(strict, oapi.StdHTTPServerOptions{BaseRouter: mux, ErrorHandlerFunc: bindingProblem})
 	mux.Handle("GET /", http.FileServerFS(c.Static))
-	return securityHeaders(accessLog(logger, validate(mux))), nil
+	return securityHeaders(accessLog(logger, headAsGet(validate(mux)))), nil
+}
+
+// headAsGet serves HEAD like GET, as HTTP expects. The contract lists GET only,
+// so the request is checked and routed as a GET; net/http still drops the body
+// because the response belongs to the original HEAD request.
+func headAsGet(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodHead {
+			r = r.Clone(r.Context())
+			r.Method = http.MethodGet
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 // bindingProblem reports a parameter the generated code could not bind. The
